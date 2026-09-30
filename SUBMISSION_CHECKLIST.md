@@ -1,67 +1,71 @@
 # GQH Hardware Track — Final Submission Checklist
 
-Use this checklist before submitting the official Google Form.
-
-## Team and Project Information
-
-- [ ] Team/project name is finalized.
-- [ ] Team member information is correct.
-- [ ] FPGA number matches the board assigned during checkout.
+Use this checklist before completing the official **Devpost** submission.
 
 ## Repository Access
 
-- [ ] The correct GitHub repository URL is ready.
-- [ ] Organizers/judges can access the repository.
-- [ ] If the repository is private, the required judging access has been granted.
+- [ ] Correct team GitHub repository URL is ready.
+- [ ] Judges can access the repository.
 - [ ] No passwords, API keys, tokens, private keys, or other secrets are committed.
 
 ## Required Project Files
 
-- [ ] Final HDL/source files are included.
-- [ ] Tang Nano 20K constraint `.cst` file(s) are included.
-- [ ] Project/build files needed to reproduce the FPGA design are included.
-- [ ] The repository README identifies the top-level entity/module.
-- [ ] The README identifies the toolchain and version used.
+- [ ] Final HDL/VHDL source files are included.
+- [ ] The **organizer-supplied** Tang Nano 20K `.cst` file is included.
+- [ ] The team did **not** unnecessarily recreate the board constraint file in FloorPlanner.
+- [ ] Gowin project/build files needed to reproduce the design are included.
+- [ ] README identifies the top-level entity/module.
+- [ ] README identifies the toolchain/version used.
 - [ ] Build instructions are complete.
 - [ ] FPGA programming instructions are complete.
-- [ ] Host-side code is included if the project requires it.
 - [ ] External libraries, IP cores, starter code, and other pre-existing resources are disclosed.
 
-## When Applicable
+## Protocol Verification
 
-- [ ] Testbench/simulation files are included.
-- [ ] Generated bitstream is included if required by organizers.
-- [ ] Benchmark or result files are included if relevant.
-- [ ] Demo/reproduction instructions are included.
-- [ ] Performance measurements explain how they were obtained.
+- [ ] UART is configured for **115200 baud**.
+- [ ] FPGA receives exactly **8 bytes** per request.
+- [ ] FPGA returns exactly **8 bytes** per response.
+- [ ] Multi-byte packet fields are **big-endian**.
+- [ ] `ITEM_A = 0x11`.
+- [ ] `ITEM_B = 0x22`.
+- [ ] `NONE = 0x00`.
+- [ ] `SELL = 0x01`.
+- [ ] `BUY = 0x02`.
+- [ ] Returned index matches received index.
+- [ ] Returned item order matches received item order.
+- [ ] No separate HOLD packet code was introduced.
 
-## Final Verification
+## Testing
 
-- [ ] The final project successfully synthesizes.
-- [ ] The final project successfully completes place & route.
-- [ ] The final project has been tested on the Tang Nano 20K.
-- [ ] The repository README accurately describes the final project.
-- [ ] The submitted demo/video corresponds to the final version, if applicable.
+- [ ] Quick UART test/reference has been reviewed and basic communication works.
+- [ ] Robust UART test/reference has been reviewed.
+- [ ] Final design has been tested on the Tang Nano 20K.
+- [ ] Team understands that the official judging run uses **1000 input packets**.
+- [ ] Team understands the first 16 samples are used for moving-average warm-up according to the reference test.
+
+## Judging Metrics
+
+- [ ] **Correctness:** outputs match the official reference.
+- [ ] **Latency:** input-to-complete-output response delay is measured by the official UART tester.
+- [ ] **LUT usage:** team knows where to find the total LUT count in Gowin:
+      **Synthesis Report → Resource → Resource Usage Summary**.
 
 ## Freeze the Final Version
 
 - [ ] All final changes are committed.
 - [ ] All final changes are pushed to GitHub.
-- [ ] The full final commit SHA has been copied.
-
-You can obtain the full SHA with:
+- [ ] Full final commit SHA has been copied.
 
 ```bash
 git rev-parse HEAD
 ```
 
-- [ ] The commit SHA entered in the submission form matches the exact final version to be judged.
+- [ ] The final commit SHA corresponds to the exact version intended for judging.
 
-## Official Form
+## Devpost
 
-- [ ] GitHub repository URL entered.
-- [ ] Full final commit SHA entered.
-- [ ] FPGA number entered correctly.
-- [ ] All required form questions completed.
-- [ ] Devpost/demo links entered if required.
-- [ ] Final submission acknowledgments reviewed and accepted.
+- [ ] Project information is complete.
+- [ ] GitHub repository URL is included.
+- [ ] Final commit SHA is included if requested by the Devpost fields/organizers.
+- [ ] Demo/video is included if required.
+- [ ] Submission is completed before the official deadline.
