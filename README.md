@@ -1,124 +1,133 @@
-# GQH Hardware Track — Final Code Submission
+# GQH Hardware Track — Code Submission & Participant Resources
 
-This repository contains the **official code-submission requirements, recommended repository structure, and README template** for teams participating in the GQH Hardware Track FPGA Hackathon.
+This repository contains the **official hardware-track code-submission instructions, judging/testing references, recommended repository structure, and README template** for teams participating in the GQH FPGA Trade Signal Hackathon.
 
-> **Important:** Each team should submit its **own GitHub repository**. This repository is the shared instructions/template repository and should not be used to upload all teams' code.
+> **Important:** Each team keeps its **own GitHub repository** for its project. This GQH repository contains shared instructions and organizer-provided resources; teams do not upload all project code here.
 
-## Quick Start
+## Official Submission Channel
 
-Before the submission deadline, each team should:
+**All final hackathon submissions will be made through Devpost.**
 
-1. Create a GitHub repository for the team project.
-2. Make sure the repository contains the final HDL/source code and the files needed to build the FPGA project.
-3. Copy the structure from [TEAM_README_TEMPLATE.md](TEAM_README_TEMPLATE.md) into the team's own `README.md` and complete every applicable section.
-4. Review the recommended layout in [REPOSITORY_STRUCTURE.md](REPOSITORY_STRUCTURE.md).
-5. Confirm that organizers/judges can access the repository.
-6. Create and push a **final commit** representing the submitted version.
-7. Copy the **full Git commit SHA** for that final commit.
-8. Complete the official GQH Hardware Track submission form using the repository URL and final commit SHA.
-9. Review [SUBMISSION_CHECKLIST.md](SUBMISSION_CHECKLIST.md) before submitting.
+Teams should place their project code in their own GitHub repository and include the repository link in the official Devpost submission.
+
+Before the deadline, each team should:
+
+1. Build and test the final FPGA design.
+2. Push the final source/project files to the team's own GitHub repository.
+3. Make sure the repository is accessible to judges.
+4. Create a final commit and record its **full Git commit SHA**.
+5. Complete the official Devpost submission with the required project information, GitHub repository, video/materials, and final commit SHA if a dedicated field is provided.
+6. Review [SUBMISSION_CHECKLIST.md](SUBMISSION_CHECKLIST.md).
+
+## Start Here
+
+- [Judging & Testing Rules](JUDGING_AND_TESTING.md)
+- [Team README Template](TEAM_README_TEMPLATE.md)
+- [Recommended Repository Structure](REPOSITORY_STRUCTURE.md)
+- [Final Submission Checklist](SUBMISSION_CHECKLIST.md)
+- [Participant Testing Resources](participant-resources/README.md)
+
+## Organizer-Provided Testing References
+
+The following reference guides are available in this repository:
+
+- [Quick UART Test Reference](participant-resources/testing/21_quick_uart_test_REFERENCE.md)
+- [Robust UART / Scoring Test Reference](participant-resources/testing/22_robust_uart_test_REFERENCE.md)
+
+The corresponding Python testing scripts and organizer-supplied Tang Nano 20K `.cst` constraint file will be placed in the participant-resources folder when they are distributed by the organizers.
+
+## Judging Criteria
+
+Hardware-track judging uses three technical criteria:
+
+1. **Correctness of outputs** during the official **1000-packet** judging run.
+2. **Input-to-output response delay / latency** measured by the official UART test.
+3. **LUT usage** reported by Gowin after synthesis.
+
+See [JUDGING_AND_TESTING.md](JUDGING_AND_TESTING.md) for the exact packet interface, latency definition, LUT-report instructions, and testing workflow.
+
+## Fixed Packet Protocol
+
+The external interface is fixed and must not be changed.
+
+### PC → FPGA
+
+```text
+[index16][item1_8][price1_16][item2_8][price2_16]
+```
+
+### FPGA → PC
+
+```text
+[index16][item1_8][action1_8][item2_8][action2_8][reserved16]
+```
+
+### Fixed IDs
+
+```text
+ITEM_A = 0x11 = 00010001
+ITEM_B = 0x22 = 00100010
+
+NONE = 0x00 = 00000000
+SELL = 0x01 = 00000001
+BUY  = 0x02 = 00000010
+```
+
+Both packets are **64 bits / 8 bytes**. Multi-byte fields are transmitted **big-endian**, and UART operates at **115200 baud**.
+
+Do not modify the packet layout, field widths, byte order, item IDs, action IDs, or packet length.
+
+## Organizer-Supplied Constraint File
+
+Participants **do not need to create a new pin-constraint file in FloorPlanner**.
+
+The organizers will provide the Tang Nano 20K `.cst` constraint file. Add the supplied file to the Gowin project as the physical constraint file and make sure the top-level port names match the supplied constraints.
 
 ## What the Team Repository Should Contain
 
-At minimum, the submitted repository should contain:
+At minimum:
 
-- Final HDL/source code used for the project
-- Tang Nano 20K constraint file(s), including the relevant `.cst` file
-- Project/build files needed to reproduce the design
-- A complete `README.md` explaining how to build, program, and test the project
+- Final HDL/VHDL source code
+- The organizer-supplied Tang Nano 20K `.cst` file
+- Gowin project/build files needed to reproduce the design
+- A complete `README.md`
 - The top-level entity/module name
-- The toolchain and version used
-- Any host-side software required to run the project, if applicable
+- Toolchain/version information
+- Any host-side code required by the team project
 - A disclosure of external libraries, IP cores, starter code, or other pre-existing resources used
 
-Teams should also include testbenches, generated bitstreams, benchmark files, or other artifacts **when applicable or when required by the organizers**.
-
-## Recommended Repository Layout
-
-```text
-team-project/
-├── README.md
-├── src/
-│   └── HDL source files
-├── constraints/
-│   └── Tang Nano 20K .cst file(s)
-├── testbench/
-│   └── simulation/testbench files
-├── gowin/
-│   └── Gowin project/build files
-├── host/
-│   └── optional Python/C/C++/other host-side code
-├── bitstream/
-│   └── generated FPGA bitstream, if required
-└── results/
-    └── optional benchmarks, plots, logs, or output data
-```
-
-See [REPOSITORY_STRUCTURE.md](REPOSITORY_STRUCTURE.md) for details.
+Include testbenches, generated bitstreams, benchmark files, or other artifacts when applicable or required by organizers.
 
 ## Final Commit SHA
 
-The submission form asks for the **full Git commit SHA** so organizers can identify the exact version submitted before the deadline.
-
-Before submitting:
+Once the final project is ready:
 
 ```bash
+git status
 git add .
 git commit -m "Final hackathon submission"
-git push origin main
+git push
 git rev-parse HEAD
 ```
 
-The final command prints a value similar to:
-
-```text
-7fe929310cd84d0e1f1d6c1234567890abcdef12
-```
-
-Copy the **entire SHA** into the submission form.
-
-If your default branch is not `main`, push the branch your team is using and make sure the submitted SHA points to the exact final version.
+Save the entire SHA printed by the final command. This identifies the exact version intended for judging.
 
 ## Repository Access
 
-Teams are responsible for making sure organizers and judges can access the submitted repository.
+Teams are responsible for ensuring judges can access the submitted repository.
 
-- **Public repository:** no additional access step is normally necessary.
-- **Private repository:** follow the organizer-provided instructions for granting judging access before the deadline.
+- **Public repository:** verify that the URL opens normally.
+- **Private repository:** follow the organizer-provided judging-access instructions before the deadline.
 
-Do not put passwords, API keys, tokens, private keys, or other secrets in the repository.
+Never commit passwords, API keys, access tokens, private keys, or other secrets.
 
-## Reproducibility
+## Devpost
 
-A judge or organizer should be able to open your repository and understand:
+The official Devpost URL and final deadline will be added once confirmed by the organizers.
 
-- What the project does
-- Which parts run directly on the FPGA
-- Which HDL/source files are part of the final design
-- The top-level entity/module
-- Which version of the toolchain was used
-- How to synthesize and complete place & route
-- How to program the Tang Nano 20K
-- How to reproduce the team's demo or expected output
-
-Use [TEAM_README_TEMPLATE.md](TEAM_README_TEMPLATE.md) to make sure these items are documented.
-
-## Submission Freeze
-
-The repository URL may continue to exist after the deadline, but evaluation should be based on the **final commit SHA submitted through the official form**. Changes pushed after the deadline may not be considered during judging.
-
-## Submission Form
-
-The official Google Form link will be added here once finalized.
-
-**Submission Form:** _To be added_
-
-## Questions
-
-For event-specific questions, contact the GQH Hardware Track organizers through the official hackathon communication channel.
+**Devpost:** _To be added_  
+**Deadline:** _To be added_
 
 ---
 
-### Organizer note
-
-Some requirements may be updated before the event begins. Teams should use the latest version of these instructions and any official announcements from the GQH Hardware Track organizers.
+For event-specific questions, use the official GQH Hardware Track communication channel.
