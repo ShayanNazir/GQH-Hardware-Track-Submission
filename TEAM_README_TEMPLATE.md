@@ -9,15 +9,11 @@
 
 ## Project Overview
 
-Briefly explain what your project does, the problem it addresses, and the main idea behind your solution.
+Briefly explain what your project does and the main idea behind the implementation.
 
 ## FPGA Implementation
 
-Describe **what runs directly on the FPGA**.
-
-Be specific about the computations, algorithms, signal processing, market-data processing, control logic, or other functionality implemented in hardware.
-
-Also describe any functionality that runs on a host computer rather than on the FPGA.
+Describe what runs directly on the FPGA and any host-side functionality.
 
 ## Hardware
 
@@ -34,7 +30,7 @@ Also describe any functionality that runs on a host computer rather than on the 
 
 - Gowin EDA version:
 - Other required software/tools:
-- Operating system used for development, if relevant:
+- Operating system, if relevant:
 
 ## Top-Level Entity / Module
 
@@ -42,77 +38,55 @@ Also describe any functionality that runs on a host computer rather than on the 
 top_level_name_here
 ```
 
+## Organizer-Supplied Constraint File
+
+State that the organizer-provided Tang Nano 20K `.cst` file is used and identify its location in this repository.
+
+Do not recreate the board pin constraints in FloorPlanner unless explicitly instructed by organizers.
+
 ## Repository Structure
 
-Briefly describe the important folders/files in this repository.
-
-Example:
-
-```text
-src/          HDL source files
-constraints/  Tang Nano 20K .cst constraints
-testbench/    simulation/testbench files
-gowin/        Gowin project/build files
-host/         optional host-side software
-bitstream/    generated bitstream, if included
-results/      optional benchmark/output files
-```
+Briefly describe the important folders/files.
 
 ## Build Instructions
 
-Provide enough detail for an organizer or judge to reproduce the FPGA build.
-
-1. Open/install the required toolchain.
-2. Open/import the project.
-3. Set the top-level entity/module.
-4. Add the required source and constraint files.
+1. Open/import the Gowin project.
+2. Add/verify required source files.
+3. Add the organizer-supplied `.cst` as the physical constraint file.
+4. Verify the top-level entity/module.
 5. Run synthesis.
-6. Run place & route.
-7. Generate the bitstream/programming file.
-8. Note any additional required steps.
-
-Include any project-specific settings that are necessary.
+6. Run Place & Route.
+7. Generate the programming file.
+8. Note any project-specific steps.
 
 ## Programming the Tang Nano 20K
 
 Explain how to load the final design onto the board.
 
-1. Connect the Tang Nano 20K.
-2. Open the required programming tool.
-3. Select the generated programming file.
-4. Program the board.
-5. Verify expected behavior.
+## Fixed UART Interface
 
-Add any project-specific steps.
+Confirm that the design follows the official interface:
 
-## Inputs
+```text
+PC -> FPGA:
+[index16][item1_8][price1_16][item2_8][price2_16]
 
-Describe the inputs to the FPGA/project.
+FPGA -> PC:
+[index16][item1_8][action1_8][item2_8][action2_8][reserved16]
 
-Examples:
+ITEM_A = 0x11
+ITEM_B = 0x22
 
-- Buttons or switches
-- UART/serial data
-- Market data
-- Host-computer input
-- Test vectors
-- Clock/reset behavior
+NONE = 0x00
+SELL = 0x01
+BUY  = 0x02
 
-## Outputs
-
-Describe the expected outputs.
-
-Examples:
-
-- LEDs
-- UART/serial output
-- Display output
-- Signals returned to a host computer
-- Benchmark/result files
+UART = 115200 baud
+Packet size = 8 bytes each direction
+Multi-byte fields = big-endian
+```
 
 ## How to Reproduce the Demo
-
-Give a short step-by-step procedure that reproduces what your team demonstrated during the hackathon.
 
 1.
 2.
@@ -126,52 +100,47 @@ Describe what the judge should observe.
 
 ## Verification / Testing
 
-Describe how your team tested the final design.
+Describe how the design was tested, including use of the organizer-provided UART testing scripts when applicable.
 
-If applicable, include:
+## Judging Metrics / Results
 
-- Testbench instructions
-- Simulation results
-- Hardware verification procedure
-- Known edge cases
-- Benchmark methodology
+### Correctness
 
-## Performance / Results
+- Local test used:
+- Correctness result:
 
-If applicable, report relevant results such as:
+> Official judging uses a 1000-packet run.
 
-- Latency
-- Throughput
-- Clock frequency
-- FPGA resource utilization
-- Quant/strategy performance metrics
-- Other measurements used in your project
+### Latency
 
-Explain how each result was measured.
+- Average measured input-to-output round-trip latency:
+- Test/setup used:
+
+### LUT Usage
+
+After synthesis, open:
+
+**Synthesis Report → Resource → Resource Usage Summary**
+
+Record:
+
+- Total LUT:
+- LUT2:
+- LUT3:
+- LUT4:
+- Other relevant resource usage:
 
 ## External Libraries / IP / Starter Code
 
-List any external libraries, IP cores, starter code, open-source projects, datasets, or other pre-existing resources used.
-
-For each item, include:
-
-- Name
-- Source/link
-- Purpose in the project
-
-If none were used, write:
-
-```text
-None.
-```
+List any external resources used and their purpose. If none were used, write `None.`
 
 ## Known Limitations
 
-Document any limitations, incomplete features, assumptions, or known issues that judges should be aware of.
+Document any limitations, assumptions, or known issues.
 
 ## Final Submission
 
 - GitHub repository URL:
 - Final commit SHA:
 - Demo video URL, if applicable:
-- Devpost URL, if applicable:
+- Devpost URL:
