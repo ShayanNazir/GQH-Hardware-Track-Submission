@@ -1,8 +1,8 @@
 # Recommended Team Repository Structure
 
-This document explains the recommended layout for GQH Hardware Track team repositories.
+This document explains the recommended layout for GQH Hardware Track team repositories. It follows Part 3 of the [participant guide](participant-resources/GQH_Hardware_Track_Participant_Guide.pdf).
 
-The exact internal organization may vary, but judges should be able to quickly locate the final source code, organizer-supplied constraints, build files, and reproduction instructions.
+Each team submits its **GitHub repository URL and full commit SHA** through Devpost. There is no zip upload. The exact internal organization may vary, but judges should be able to quickly locate the final source code, organizer-supplied constraints, build files, the final `.fs` file, and reproduction instructions.
 
 ## Suggested Layout
 
@@ -10,53 +10,55 @@ The exact internal organization may vary, but judges should be able to quickly l
 team-project/
 ├── README.md
 ├── src/
-│   └── HDL/VHDL source files
+│   └── HDL source files
 ├── constraints/
-│   └── organizer-supplied Tang Nano 20K .cst
+│   └── 19_tang_nano_20k.cst (organizer-supplied)
 ├── testbench/
 │   └── testbench/simulation files
 ├── gowin/
 │   └── Gowin project/build files
-├── host/
-│   └── optional host-side software
 ├── bitstream/
-│   └── generated programming file, if required
+│   └── final .fs file (required)
+├── host/
+│   └── optional host-side test/demo code (not run during judging)
 └── results/
-    └── optional benchmarks, logs, plots, or outputs
+    └── optional test CSVs and benchmarks
 ```
 
 ## `README.md`
 
 Use [TEAM_README_TEMPLATE.md](TEAM_README_TEMPLATE.md) as a starting point.
 
-The README should explain:
+The README should let a judge understand and reproduce the project without guessing. It must include:
 
-- What the project does
-- What runs directly on the FPGA
-- Hardware/toolchain used
-- Top-level entity/module
-- How to build the design
-- How to program the Tang Nano 20K
-- How to reproduce the demo
-- Expected inputs and outputs
-- Testing results
-- LUT usage
-- External resources used
-- Known limitations
+- Team/project name and team members
+- Brief project description
+- What functionality is implemented directly on the FPGA
+- Any host-side tooling used for local testing (host software is not run during judging)
+- FPGA board: Tang Nano 20K
+- HDL/languages used
+- Gowin EDA version used
+- Top-level entity/module name
+- Build instructions and FPGA programming instructions
+- Project inputs and expected outputs; how to reproduce the final demo
+- Testing/verification procedure
+- Relevant performance results, including your total LUT count
+- External libraries, IP cores, starter code, datasets, or other pre-existing resources used
+- Known limitations or incomplete features
 
 ## `src/`
 
-Store the HDL/VHDL source files that make up the FPGA design.
+Store the HDL source files that make up the FPGA design.
 
 ## `constraints/`
 
-Use the **organizer-supplied Tang Nano 20K `.cst` file**.
+Use the **organizer-supplied `19_tang_nano_20k.cst` file**.
 
-Participants do **not** need to create a new constraint file in Gowin FloorPlanner. Add the supplied `.cst` to the project as the physical constraint file and make sure the top-level port names match it.
+Participants do **not** create their own constraint file or recreate pin assignments in Gowin FloorPlanner. Add the supplied `.cst` to the project as the physical constraint file. Top-level port names must match it exactly and may not be renamed.
 
 ## `testbench/`
 
-Store simulation/testbench files here when applicable.
+Store simulation/testbench files here when applicable. Do not add simulation-only testbenches to the synthesis sources.
 
 If the project does not use a testbench, explain the hardware verification procedure in the README.
 
@@ -64,26 +66,27 @@ If the project does not use a testbench, explain the hardware verification proce
 
 Store project/build files required to reproduce the design in Gowin EDA.
 
-Avoid committing unnecessary generated caches or machine-specific temporary files.
-
-## `host/`
-
-Use this directory for any team-created host software that communicates with the FPGA.
-
-The official organizer testing scripts do not need to be copied into every team repository unless organizers specifically request it; they are distributed from the central GQH resource repository.
+Avoid committing unnecessary generated caches or machine-specific temporary files. The final `.fs` file is the exception: it is required (see below).
 
 ## `bitstream/`
 
-If organizers require the generated FPGA programming file, store the final file here.
+**Required.** Store the final generated `.fs` file here, built from the exact source in the submitted commit. Gowin writes it to `impl/pnr/<project>.fs`. Judges program the board in SRAM mode from this file.
+
+## `host/`
+
+Optional. Use this directory for any team-created host software used for **local testing or demos only**.
+
+During the official run, no team-supplied host software is executed. All UART parsing, state, computation, and response generation must happen on the FPGA.
+
+The official organizer testing scripts do not need to be copied into every team repository unless organizers specifically request it; they are distributed from this GQH resource repository.
 
 ## `results/`
 
 Optional location for:
 
-- Correctness/test outputs
+- CSVs from `22_robust_uart_test.py`
 - Latency measurements
-- Gowin resource-utilization information
-- LUT usage
+- Gowin resource-utilization information, including total LUT usage
 - Logs
 - Plots
 - Demo output
@@ -94,7 +97,7 @@ Never commit passwords, API keys, access tokens, private SSH keys, or personal c
 
 ## Final Submission Version
 
-The final judged version should correspond to the **full commit SHA identified in the team's Devpost submission or other organizer-specified submission field**.
+The judged version is the **full commit SHA identified in the team's Devpost submission**.
 
 Before submitting:
 
@@ -106,4 +109,4 @@ git push
 git rev-parse HEAD
 ```
 
-Verify that the final commit is pushed successfully.
+Verify that the final commit is pushed successfully, then enter the repository URL and full commit SHA on Devpost.
