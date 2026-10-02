@@ -16,6 +16,18 @@ Use this test before running the full scoring test. Its purpose is to verify tha
 
 This test is intentionally small and easy to inspect. Passing it is a strong indication that the UART and packet-handling portions of your design are working.
 
+The full rules are in the [participant guide](../GQH_Hardware_Track_Participant_Guide.pdf) and [JUDGING_AND_TESTING.md](../../JUDGING_AND_TESTING.md). If this page disagrees with the guide, the guide wins.
+
+> **[TODO]** `21_quick_uart_test.py` is not yet in this repository. When it is added, its comments must not say that items are swapped on "every other transaction"; they must match the item-order rule below.
+
+---
+
+# WARNING: THE BL616 USB-SERIAL BRIDGE
+
+> The Tang Nano 20K's onboard BL616 USB-serial bridge can **drop or corrupt bytes**, causing timeouts, if your FPGA sends response bytes **back-to-back with no idle time**. A functionally correct design can still fail this way.
+>
+> Your design **must** add idle time or buffering between response bytes. The measured latency includes that added delay, so there is a trade-off: more idle time is safer but slower.
+
 ---
 
 # IMPORTANT: THE PACKET PROTOCOL IS FIXED
@@ -50,10 +62,15 @@ The test uses:
 |---|---:|
 | Baud rate | `115200` |
 | Data bits | `8` |
+| Parity | None |
+| Stop bits | `1` |
+| Bit order | LSB first |
 | Packet transport | Raw binary bytes |
 | PC response timeout | `1.0 s` |
 
-The Python script's `PORT` variable must be changed to the COM port assigned to the Tang Nano board.
+The script needs **Python 3** and **pyserial** (`pip install pyserial`).
+
+The Python script's `PORT` variable must be changed to the COM port assigned to the Tang Nano board. `PORT` is the **only** setting you may change.
 
 Example:
 
@@ -120,7 +137,7 @@ and not an ASCII character such as:
 "B"
 ```
 
-The moving-average algorithm may also **hold the previous BUY or SELL action when no new crossing occurs**. "Hold" describes algorithm behavior; it does **not** introduce a new packet code. The returned action byte remains the previously held `BUY` (`0x02`) or `SELL` (`0x01`) value. `NONE` (`0x00`) is the initial/no-action value.
+The moving-average algorithm may also **hold the previous BUY or SELL action when no new crossing occurs**. "Hold" describes algorithm behavior; it does **not** introduce a new packet code. The returned action byte remains the previously held `BUY` (`0x02`) or `SELL` (`0x01`) value. `NONE` (`0x00`) is the initial/no-action value and is sent only before that item's first crossing.
 
 ---
 
@@ -205,7 +222,7 @@ struct.Struct(">HBBBBH")
 | 6 | `reserved[15:8]` |
 | 7 | `reserved[7:0]` |
 
-Recommended reserved value:
+The reserved field **must** be:
 
 ```text
 reserved = 0x0000
@@ -226,7 +243,7 @@ The packet should therefore be assembled as:
 
 This is extremely important.
 
-The test intentionally changes the ordering of Item A and Item B after the warm-up period.
+The tester may place **either item in either slot on any packet**.
 
 One transaction may contain:
 
@@ -242,7 +259,7 @@ item1 = ITEM_B
 item2 = ITEM_A
 ```
 
-Your FPGA must use the **item ID**, rather than the packet position, to determine which item's moving-average state is being updated.
+Your FPGA must use **only the item ID**, never the packet index or slot position, to determine which item's moving-average state is being updated.
 
 If the input packet contains:
 
@@ -266,7 +283,9 @@ The script contains short deterministic price sequences for both items.
 
 The first 16 samples fill the moving-average history. After that, the prices intentionally move enough to exercise the trade-signal logic.
 
-The test also swaps the packet order on alternating transactions after index 15. This tests whether your FPGA routes information by the **item ID** instead of assuming that packet position 1 always means Item A.
+After warm-up, the test also changes which slot each item occupies. This tests whether your FPGA routes information by the **item ID** instead of assuming that packet position 1 always means Item A.
+
+Do not design around the slot pattern used by any particular test. The official tester may place either item in either slot on any packet.
 
 ---
 
@@ -280,11 +299,13 @@ Therefore:
 indices 0 through 15 = WARMUP
 ```
 
-These first 16 samples are used to populate the moving-average history.
+These first 16 samples are used to populate the moving-average history. During warm-up, each item's price is added to its window and sum **and** stored as that item's previous price, so at index 16 the previous price is the price from index 15. No crossing is evaluated, and the FPGA responds `NONE` for both actions.
 
-Participants should not assume that these samples represent normal scored trade decisions.
+Warm-up packets are not scored for correctness, but their responses must still follow the protocol and arrive in time.
 
-A good hardware design should initialize/reset its state cleanly so that the first packet begins a new test sequence.
+Index 0 starts a new session: on receipt of index 0, your design must clear all previous state (every window, sum, previous price, and last action) **first**, then process index 0's two prices as the first samples of the new window. The board is not reset between runs, so this must happen on index 0 by itself.
+
+See the [exact algorithm](../../JUDGING_AND_TESTING.md#exact-16-sample-moving-average-algorithm).
 
 ---
 
@@ -341,11 +362,12 @@ This is a **round-trip software-observed latency**, so it includes:
 - PC UART transmission
 - FPGA UART reception
 - FPGA processing
+- Any idle time your design adds between response bytes
 - FPGA UART transmission
 - PC UART reception
 - Host/USB/serial overhead
 
-It is not purely the FPGA algorithm's internal clock-cycle latency.
+It is not purely the FPGA algorithm's internal clock-cycle latency. At 115200 baud (8N1), the 16 bytes of one transaction need only about 1.39 ms of wire time; most of the roughly 16.6 ms reference latency is BL616, USB, operating-system, and serial-buffering overhead.
 
 ---
 
@@ -354,8 +376,10 @@ It is not purely the FPGA algorithm's internal clock-cycle latency.
 For each transaction, the terminal prints information similar to:
 
 ```text
-idx= 16 | item 0x11: BUY  | item 0x22: SELL | reserved=0x0000 | VALID | 1500.0 us
+idx= 16 | item 0x11: BUY  | item 0x22: SELL | reserved=0x0000 | VALID | <latency> us
 ```
+
+The latency figure depends on your PC and design; the organizer reference design averaged about 16.6 ms on the judge PC.
 
 During the first 16 transactions it reports:
 
@@ -377,11 +401,13 @@ This quick test is primarily intended to verify that communication and packet ro
 
 The PC expects exactly 8 response bytes.
 
-If it does not receive all 8 bytes within the serial timeout, the script raises a timeout error.
+If it does not receive all 8 bytes within the 1.0 s serial timeout, the script raises a timeout error. In the official run, a timeout counts as incorrect and ends the run.
 
 Common causes include:
 
+- Response bytes sent back-to-back with no idle time, so the BL616 bridge drops or corrupts bytes (add idle time or buffering between response bytes)
 - Incorrect COM port
+- Another program (Gowin Programmer, a serial terminal, another script) holding the COM port
 - Incorrect baud rate
 - Incorrect FPGA clock/baud divider
 - UART TX not connected
@@ -396,9 +422,11 @@ Common causes include:
 
 Before running the full test, verify:
 
-- UART is configured for `115200` baud.
+- Top-level port names match the organizer-supplied `19_tang_nano_20k.cst` exactly (`sys_clk`, `reset_btn`, `uart_rx_i`, `uart_tx_o`, `led0_n`, `led1_n`); ports are not renamed.
+- UART is configured for `115200` baud, 8N1, LSB first.
 - FPGA receives exactly 8 bytes per input packet.
-- FPGA sends exactly 8 bytes per response.
+- FPGA sends exactly 8 bytes per response, only after all 8 request bytes arrive, and never sends unsolicited bytes.
+- FPGA adds idle time or buffering between response bytes (BL616 warning above).
 - Input packet is decoded as `[index, item1, price1, item2, price2]`.
 - Output packet is encoded as `[index, item1, action1, item2, action2, reserved]`.
 - Multi-byte values are big-endian on the wire.
@@ -408,11 +436,11 @@ Before running the full test, verify:
 - `SELL = 0x01`.
 - `BUY = 0x02`.
 - No new "HOLD" packet code is invented; holding means retaining the previous BUY/SELL action.
-- Item IDs determine routing.
+- Item IDs alone determine routing (never slot position or packet index).
 - Returned item order matches the received item order.
 - The returned index matches the received index.
-- Reserved bits are preferably `0x0000`.
-- The design starts from a known state at the beginning of the test.
+- Reserved bits are `0x0000` (required).
+- Index 0 clears all state, then its prices are processed as the first samples of a new window.
 
 ---
 
@@ -431,6 +459,8 @@ INPUT:
 OUTPUT:
 [index16][item1_8][action1_8][item2_8][action2_8][reserved16]
 
+reserved = 0x0000
+
 ITEM_A = 0x11
 ITEM_B = 0x22
 
@@ -438,7 +468,7 @@ NONE = 0x00
 SELL = 0x01
 BUY  = 0x02
 
-UART = 115200 baud
+UART = 115200 baud, 8N1, LSB first
 PACKET SIZE = 8 bytes in each direction
 BYTE ORDER = big-endian for multi-byte fields
 ```

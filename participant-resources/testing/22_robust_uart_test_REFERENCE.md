@@ -2,31 +2,43 @@
 
 ## Purpose
 
-`22\_robust\_uart\_test.py` is the **full functional and scoring test** for the FPGA Trade Signal Hackathon.
+`22_robust_uart_test.py` is the **full functional and scoring-style test** for the FPGA Trade Signal Hackathon.
 
 Unlike the quick UART test, this script:
 
-* Generates 100 deterministic test packets (Real judging test will generate 1000 with random seed).
+* Generates **100 test packets** (indices 0–99), the same length as the official judging run.
+* Uses a **placeholder participant seed**. It is **not** the official judging seed.
 * Tests two independent items.
 * Calculates the expected results in software **before transmission**.
 * Exercises the 16-sample moving-average trade algorithm.
-* Changes Item A / Item B packet positions to test ID-based routing.
-* Sends only one transaction at a time.
-* Checks the returned index.
-* Checks the returned item IDs.
-* Checks both returned actions.
-* Detects incomplete UART responses/timeouts.
+* After warm-up, randomly places Item A and Item B in either slot on every packet to test ID-based routing.
+* Sends only one transaction at a time (stop-and-wait).
+* Checks the returned index, both item IDs, both actions, and the reserved field.
+* Detects incomplete UART responses/timeouts (1.0 s per packet).
 * Measures round-trip latency.
+* Scores against the fixed official totals: **84 scored packets** and **168 scored actions**.
 * Produces a CSV containing the detailed results.
 * Produces a TXT summary containing final correctness and latency statistics.
 
-Participants should first establish basic communication using `21\_quick\_uart\_test.py`, then use this script for full verification.
+Participants should first establish basic communication using `21_quick_uart_test.py`, then use this script for full verification.
 
-\---
+The full rules are in the [participant guide](../GQH_Hardware_Track_Participant_Guide.pdf) and [JUDGING_AND_TESTING.md](../../JUDGING_AND_TESTING.md). If this page disagrees with the guide, the guide wins.
+
+> **[TODO]** `22_robust_uart_test.py` is not yet in this repository. This page describes the participant version as it must behave: `PACKET_COUNT = 100`, a placeholder seed that is not the official seed, seeded random slot placement after warm-up, fixed 84/168 scoring totals, `reserved != 0x0000` treated as an incorrect packet (with a `RESERVED` status in the CSV), 1.0 s timeout, stop-and-wait, and CSV/summary output for 100 packets.
+
+---
+
+# WARNING: THE BL616 USB-SERIAL BRIDGE
+
+> The Tang Nano 20K's onboard BL616 USB-serial bridge can **drop or corrupt bytes**, causing timeouts, if your FPGA sends response bytes **back-to-back with no idle time**. A functionally correct design can still fail this way.
+>
+> Your design **must** add idle time or buffering between response bytes. The measured latency includes that added delay, so there is a trade-off: more idle time is safer but slower. Check the CSV to see which packets failed.
+
+---
 
 # CRITICAL COMPETITION RULE: DO NOT CHANGE THE PACKET PROTOCOL
 
-> \*\*The packet format and encoded values are part of the competition interface. They must not be changed.\*\*
+> **The packet format and encoded values are part of the competition interface. They must not be changed.**
 
 Participants must **NOT** change:
 
@@ -46,26 +58,33 @@ Do not edit the testing script to make an incompatible FPGA implementation pass.
 
 Your FPGA must conform to the protocol below.
 
-\---
+---
 
 # Test Configuration
 
 The full test uses:
 
 ```text
-UART baud rate: 115200
-Packet count:   100
+UART:           115200 baud, 8N1, LSB first
+Packet count:   100 (indices 0-99)
+Warm-up:        indices 0-15
+Scored:         84 packets, 168 actions
 Window size:    16
 Price range:    0 through 100
+Timeout:        1.0 s per packet
 ```
 
-The test uses the deterministic random seed:
+The script needs **Python 3** and **pyserial** (`pip install pyserial`).
 
-```text
-0x57214720
-```
+The local price range is narrower than the protocol allows. Prices are unsigned 16-bit values, so your design should handle the full 16-bit range (a 20-bit window sum) rather than relying on this test's range.
 
-This means the generated price sequence is repeatable. Running the same unmodified test produces the same software-generated test vectors.
+## Seed
+
+The script uses a fixed **placeholder participant seed**, so the generated price sequence is repeatable: running the same unmodified test produces the same test vectors and the same slot placements.
+
+The placeholder seed is **not** the official judging seed. The official seed is chosen by the organizers, is the same for every team, and is not published in advance. Do not hardcode price patterns.
+
+## What You May Change
 
 The participant may need to change:
 
@@ -75,52 +94,52 @@ PORT = "COM6"
 
 to the COM port assigned to their Tang Nano board.
 
-Changing the COM port is expected.
+Changing the COM port is expected. It is the **only** setting you may change.
 
-Changing the packet protocol or scoring logic is **not**.
+Changing the packet protocol or scoring logic is **not** allowed.
 
-\---
+---
 
 # Fixed Item IDs
 
 The test defines:
 
-|Item|Hex|Binary|
-|-|-:|-:|
-|Item A|`0x11`|`00010001`|
-|Item B|`0x22`|`00100010`|
+| Item | Hex | Binary |
+|---|---:|---:|
+| Item A | `0x11` | `00010001` |
+| Item B | `0x22` | `00100010` |
 
 These IDs allow the FPGA to determine which independent moving-average state belongs to each received price.
 
-> \*\*Do not change these values.\*\*
+> **Do not change these values.**
 
 The packet position is not a substitute for the item ID.
 
 Your logic should effectively recognize:
 
 ```text
-if item\_id == 0x11:
+if item_id == 0x11:
     use Item A state/history
 
-if item\_id == 0x22:
+if item_id == 0x22:
     use Item B state/history
 ```
 
-\---
+---
 
 # Fixed Action Codes
 
 Every returned action is exactly 8 bits.
 
-|Meaning|Hex|Binary|
-|-|-:|-:|
-|NONE / initial no-action state|`0x00`|`00000000`|
-|SELL|`0x01`|`00000001`|
-|BUY|`0x02`|`00000010`|
+| Meaning | Hex | Binary |
+|---|---:|---:|
+| NONE / initial no-action state | `0x00` | `00000000` |
+| SELL | `0x01` | `00000001` |
+| BUY | `0x02` | `00000010` |
 
 These encodings are fixed.
 
-> \*\*Do not reverse BUY and SELL. Do not invent a different encoding.\*\*
+> **Do not reverse BUY and SELL. Do not invent a different encoding.**
 
 In particular:
 
@@ -129,22 +148,22 @@ SELL = 00000001
 BUY  = 00000010
 ```
 
-The algorithm also has **hold behavior**: if no new crossing occurs, the previous action is retained. "HOLD" is not a fourth output encoding in these scripts. If the previous action was BUY, holding means the returned action remains `0x02`; if the previous action was SELL, it remains `0x01`. Before an action has been established, the state begins as `NONE = 0x00`.
+The algorithm also has **hold behavior**: if no new crossing occurs, the previous action is retained. "HOLD" is not a fourth output encoding. If the previous action was BUY, holding means the returned action remains `0x02`; if the previous action was SELL, it remains `0x01`. Before an item's first crossing, its action is `NONE = 0x00`.
 
-\---
+---
 
 # PC -> FPGA Packet
 
 Every PC-to-FPGA packet contains exactly 64 bits:
 
 ```text
-\[index16]\[item1\_8]\[price1\_16]\[item2\_8]\[price2\_16]
+[index16][item1_8][price1_16][item2_8][price2_16]
 ```
 
 Python representation:
 
 ```python
-INPUT\_STRUCT = struct.Struct(">HBHBH")
+INPUT_STRUCT = struct.Struct(">HBHBH")
 ```
 
 where:
@@ -157,42 +176,42 @@ B = unsigned 8-bit value
 
 ## Exact Byte Order
 
-|Byte|Field|
-|-:|-|
-|0|`index\[15:8]`|
-|1|`index\[7:0]`|
-|2|`item1\[7:0]`|
-|3|`price1\[15:8]`|
-|4|`price1\[7:0]`|
-|5|`item2\[7:0]`|
-|6|`price2\[15:8]`|
-|7|`price2\[7:0]`|
+| Byte | Field |
+|---:|---|
+| 0 | `index[15:8]` |
+| 1 | `index[7:0]` |
+| 2 | `item1[7:0]` |
+| 3 | `price1[15:8]` |
+| 4 | `price1[7:0]` |
+| 5 | `item2[7:0]` |
+| 6 | `price2[15:8]` |
+| 7 | `price2[7:0]` |
 
 Hardware-oriented view:
 
 ```text
 63                     48 47      40 39          24 23      16 15           0
 +------------------------+----------+--------------+----------+--------------+
-|        INDEX\[15:0]     | ITEM1    | PRICE1\[15:0] | ITEM2    | PRICE2\[15:0] |
+|        INDEX[15:0]     | ITEM1    | PRICE1[15:0] | ITEM2    | PRICE2[15:0] |
 +------------------------+----------+--------------+----------+--------------+
 ```
 
 The packet contains **two prices in every transaction**, one for each identified item.
 
-\---
+---
 
 # FPGA -> PC Packet
 
 For every complete input packet, the FPGA must return exactly:
 
 ```text
-\[index16]\[item1\_8]\[action1\_8]\[item2\_8]\[action2\_8]\[reserved16]
+[index16][item1_8][action1_8][item2_8][action2_8][reserved16]
 ```
 
 Python representation:
 
 ```python
-OUTPUT\_STRUCT = struct.Struct(">HBBBBH")
+OUTPUT_STRUCT = struct.Struct(">HBBBBH")
 ```
 
 Total:
@@ -203,37 +222,39 @@ Total:
 
 ## Exact Byte Order
 
-|Byte|Field|
-|-:|-|
-|0|`index\[15:8]`|
-|1|`index\[7:0]`|
-|2|`item1\[7:0]`|
-|3|`action1\[7:0]`|
-|4|`item2\[7:0]`|
-|5|`action2\[7:0]`|
-|6|`reserved\[15:8]`|
-|7|`reserved\[7:0]`|
+| Byte | Field |
+|---:|---|
+| 0 | `index[15:8]` |
+| 1 | `index[7:0]` |
+| 2 | `item1[7:0]` |
+| 3 | `action1[7:0]` |
+| 4 | `item2[7:0]` |
+| 5 | `action2[7:0]` |
+| 6 | `reserved[15:8]` |
+| 7 | `reserved[7:0]` |
 
 Hardware-oriented view:
 
 ```text
 63                     48 47      40 39      32 31      24 23      16 15           0
 +------------------------+----------+----------+----------+----------+--------------+
-|        INDEX\[15:0]     | ITEM1    | ACTION1  | ITEM2    | ACTION2  | RESERVED     |
+|        INDEX[15:0]     | ITEM1    | ACTION1  | ITEM2    | ACTION2  | RESERVED     |
 +------------------------+----------+----------+----------+----------+--------------+
 ```
 
-Use:
+The reserved field **must** be:
 
 ```text
 reserved = 0x0000
 ```
 
-unless the competition specification explicitly assigns another purpose to these bits.
+This test treats any other reserved value as an incorrect packet.
 
-\---
+---
 
 # Example Packet
+
+This is the worked example from the participant guide.
 
 Suppose the PC sends:
 
@@ -242,56 +263,56 @@ index  = 16
 item1  = Item A = 0x11
 price1 = 80
 item2  = Item B = 0x22
-price2 = 60
+price2 = 200
 ```
 
 The logical packet is:
 
 ```text
-\[0x0010]\[0x11]\[0x0050]\[0x22]\[0x003C]
+[0x0010][0x11][0x0050][0x22][0x00C8]
 ```
 
 The 8 UART bytes are:
 
 ```text
-00 10 11 00 50 22 00 3C
+00 10 11 00 50 22 00 C8
 ```
 
 If the FPGA decides:
 
 ```text
-Item A -> BUY
-Item B -> SELL
+Item A -> SELL
+Item B -> BUY
 ```
 
 then the response should logically be:
 
 ```text
-\[0x0010]\[0x11]\[0x02]\[0x22]\[0x01]\[0x0000]
+[0x0010][0x11][0x01][0x22][0x02][0x0000]
 ```
 
 and the actual 8 transmitted bytes are:
 
 ```text
-00 10 11 02 22 01 00 00
+00 10 11 01 22 02 00 00
 ```
 
-\---
+---
 
 # Why Item IDs Matter
 
-After the 16-packet warm-up, the test intentionally alternates item order.
+After the 16-packet warm-up, this test uses its seeded random generator to choose, on every packet, which slot each item occupies. The official tester may place either item in either slot on **any** packet.
 
 For one index the PC may send:
 
 ```text
-\[index]\[ITEM\_A]\[price\_A]\[ITEM\_B]\[price\_B]
+[index][ITEM_A][price_A][ITEM_B][price_B]
 ```
 
 and for another:
 
 ```text
-\[index]\[ITEM\_B]\[price\_B]\[ITEM\_A]\[price\_A]
+[index][ITEM_B][price_B][ITEM_A][price_A]
 ```
 
 This checks whether your FPGA routes by **ID** rather than assuming:
@@ -301,23 +322,23 @@ slot 1 = Item A
 slot 2 = Item B
 ```
 
-That assumption is incorrect.
+That assumption is incorrect. Route exclusively by item ID, never by packet index or slot position.
 
 If the PC sends:
 
 ```text
-\[index]\[ITEM\_B]\[price\_B]\[ITEM\_A]\[price\_A]
+[index][ITEM_B][price_B][ITEM_A][price_A]
 ```
 
 the FPGA must return:
 
 ```text
-\[index]\[ITEM\_B]\[action\_B]\[ITEM\_A]\[action\_A]\[reserved]
+[index][ITEM_B][action_B][ITEM_A][action_A][reserved]
 ```
 
 The response packet follows the **same item ordering as that input transaction**.
 
-\---
+---
 
 # Software Reference Model
 
@@ -334,11 +355,19 @@ The expected FPGA actions are therefore calculated **before the hardware test be
 
 The FPGA's answers are compared against this precomputed reference.
 
-\---
+The exact algorithm is also in [JUDGING_AND_TESTING.md](../../JUDGING_AND_TESTING.md#exact-16-sample-moving-average-algorithm).
+
+---
 
 # 16-Sample Moving Average
 
 Each item maintains its own 16-sample window.
+
+## Reset at Index 0
+
+Index 0 starts a new session. On receipt of index 0, clear all previous state for both items (every window, sum, previous price, and last action) **first**, then process index 0's two prices as the first samples of the new window. The board is not reset or reprogrammed between runs, so your design must do this by itself.
+
+## Warm-Up
 
 During the first 16 samples:
 
@@ -346,53 +375,64 @@ During the first 16 samples:
 index 0 through index 15
 ```
 
-the software only fills the history.
+for each item, the reference:
+
+```text
+adds the price to the window and running sum
+stores the price as the item's previous price
+does not evaluate a crossing
+expects NONE (0x00) for the action
+```
+
+So at index 16, the previous price is the price from index 15.
 
 These packets are treated as:
 
 ```text
-IGNORED\_WARMUP
+IGNORED_WARMUP
 ```
 
-and are not included in correctness scoring.
+and are not included in correctness scoring. Their responses must still follow the protocol and arrive in time.
 
-Once the window is full, the reference computes:
+## Averages
+
+From index 16 onward, the reference computes:
 
 ```text
-old\_average = running\_sum >> 4
+old_average = old_sum >> 4
 ```
 
 Since the window contains 16 values:
 
 ```text
-running\_sum / 16 = running\_sum >> 4
+running_sum / 16 = running_sum >> 4
 ```
 
-for the nonnegative integer values used by this test.
+for unsigned prices. The fraction is discarded, not rounded.
 
 For the incoming price:
 
 ```text
-new\_sum = old\_sum - oldest\_price + new\_price
-new\_average = new\_sum >> 4
+new_sum     = old_sum - oldest_price + current_price
+new_average = new_sum >> 4
 ```
 
-This means the reference uses **integer division by 16**, not floating-point averaging.
+This means the reference uses **floor division by 16**, not floating-point averaging.
 
-\---
+---
 
 # BUY / SELL Decision Logic
 
-After warm-up, the software checks for crossings.
+From index 16 onward, the software checks for crossings.
 
 ## BUY
 
 A BUY occurs when:
 
 ```text
-previous\_price <= old\_average
+previous_price <= old_average
 AND
-current\_price > new\_average
+current_price > new_average
 ```
 
 Then:
@@ -406,9 +446,9 @@ action = BUY = 0x02
 A SELL occurs when:
 
 ```text
-previous\_price >= old\_average
+previous_price >= old_average
 AND
-current\_price < new\_average
+current_price < new_average
 ```
 
 Then:
@@ -439,7 +479,13 @@ returned action = BUY (0x02)
 
 Again, **do not create a new HOLD code**. Hold is state behavior, not a separate packet encoding.
 
-\---
+## After Every Update
+
+```text
+previous_price = current_price
+```
+
+---
 
 # Two Independent Histories
 
@@ -450,13 +496,13 @@ Conceptually:
 ```text
 ITEM A:
     16-price history
-    running sum
+    running sum (20 bits)
     previous price
     current held action
 
 ITEM B:
     16-price history
-    running sum
+    running sum (20 bits)
     previous price
     current held action
 ```
@@ -465,7 +511,7 @@ Do not mix the histories.
 
 The item ID determines which state receives a particular price.
 
-\---
+---
 
 # Stop-and-Wait UART Protocol
 
@@ -495,29 +541,30 @@ The next packet is **not sent until the current read completes**.
 
 This makes the protocol simple for FPGA implementations because multiple outstanding requests do not need to be tracked.
 
-\---
+---
 
 # What Counts as a Correct Packet
 
-After warm-up, the script checks five things:
+After warm-up, the script checks six things:
 
 ```text
-1. returned index == transmitted index
-2. returned item1 == transmitted item1
-3. returned action1 == software expected action1
-4. returned item2 == transmitted item2
-5. returned action2 == software expected action2
+1. returned index    == transmitted index
+2. returned item1    == transmitted item1
+3. returned action1  == software expected action1
+4. returned item2    == transmitted item2
+5. returned action2  == software expected action2
+6. returned reserved == 0x0000
 ```
 
-A packet is counted as correct only if **all five checks pass**.
+A packet is counted as correct only if **all six checks pass**.
 
-Therefore, returning the correct BUY/SELL decisions with the wrong item IDs or index still produces an incorrect packet.
+Therefore, returning the correct BUY/SELL decisions with the wrong item IDs, the wrong index, or a nonzero reserved field still produces an incorrect packet.
 
-\---
+---
 
 # Action Correctness vs Packet Correctness
 
-The test reports two correctness measurements.
+The test reports two correctness measurements, both against **fixed totals**. They are not divided by the number of packets received, so a run that stops early scores zero for every packet it did not receive.
 
 ## Action Correctness
 
@@ -528,6 +575,10 @@ There are two scored actions per post-warm-up packet:
 ```text
 action1
 action2
+```
+
+```text
+action correctness = correct actions / 168
 ```
 
 This indicates how often individual trade decisions were correct.
@@ -542,11 +593,16 @@ item1
 action1
 item2
 action2
+reserved
+```
+
+```text
+packet correctness = correct packets / 84
 ```
 
 Packet correctness is therefore stricter.
 
-\---
+---
 
 # Timeout / Partial Packet Handling
 
@@ -556,7 +612,7 @@ The PC requests exactly 8 bytes:
 rx = ser.read(8)
 ```
 
-If fewer than 8 bytes arrive before the timeout, the test records a timeout/partial response and stops.
+If fewer than 8 bytes arrive within **1.0 s**, the test records a `TIMEOUT`, counts that packet as incorrect, and stops. Packets that were never sent score zero. This matches the official run.
 
 The test intentionally stops after an incomplete packet because continuing could cause subsequent UART bytes to become misaligned with packet boundaries.
 
@@ -564,7 +620,9 @@ Therefore:
 
 > Your FPGA should always transmit exactly one complete 8-byte response for each complete 8-byte request.
 
-\---
+If your logic is correct but you still see timeouts, read the BL616 warning at the top of this page.
+
+---
 
 # Latency Measurement
 
@@ -578,21 +636,21 @@ t1 = immediately after the complete 8-byte FPGA response
 Then:
 
 ```text
-latency\_us = (t1 - t0) / 1000
+latency_us = (t1 - t0) / 1000
 ```
 
 The final summary reports the average latency for successfully received packets.
 
-This is a **round-trip system measurement** and includes serial/USB/host overhead in addition to FPGA processing.
+This is a **round-trip system measurement**. It includes UART transfer in both directions, FPGA processing, any idle time your design adds between response bytes, and serial/USB/host overhead. At 115200 baud (8N1), the 16 bytes of one transaction need only about 1.39 ms of wire time; most of the roughly 16.6 ms reference latency is BL616, USB, operating-system, and serial-buffering overhead.
 
-\---
+---
 
 # CSV Output
 
 The test creates:
 
 ```text
-trade\_results\_100.csv
+trade_results_100.csv
 ```
 
 The CSV records fields including:
@@ -600,30 +658,30 @@ The CSV records fields including:
 ```text
 index
 
-tx\_item1
-tx\_price1
-tx\_item2
-tx\_price2
+tx_item1
+tx_price1
+tx_item2
+tx_price2
 
-expected\_action1
-expected\_action2
+expected_action1
+expected_action2
 
-rx\_index
-rx\_item1
-rx\_action1
-rx\_item2
-rx\_action2
-rx\_reserved
+rx_index
+rx_item1
+rx_action1
+rx_item2
+rx_action2
+rx_reserved
 
-action1\_correct
-action2\_correct
-packet\_correct
+action1_correct
+action2_correct
+packet_correct
 
 status
-latency\_us
+latency_us
 ```
 
-This file is useful for debugging because it shows exactly which portion of a failed transaction did not match.
+This file is useful for debugging because it shows exactly which portion of a failed transaction did not match. Keep the CSV from every run.
 
 Possible status information can identify failures such as:
 
@@ -633,46 +691,47 @@ ITEM1
 ACTION1
 ITEM2
 ACTION2
+RESERVED
 TIMEOUT
 ```
 
-\---
+---
 
 # Summary TXT Output
 
 The test also creates:
 
 ```text
-trade\_summary\_100.txt
+trade_summary_100.txt
 ```
 
 It reports:
 
-* Requested packet count.
+* Requested packet count (100).
 * Successfully received packet count.
-* Number of ignored warm-up packets.
-* Number of scored packets.
+* Number of ignored warm-up packets (16).
+* Number of scored packets (84).
 * Correct packet count.
-* Packet correctness percentage.
+* Packet correctness percentage (out of 84).
 * Correct individual action count.
-* Action correctness percentage.
+* Action correctness percentage (out of 168).
 * Timeout count.
 * Average successful round-trip latency.
 * UART port.
 * UART baud rate.
-* Random seed.
+* Seed used (the placeholder participant seed).
 
 This provides a compact final test result.
 
-\---
+---
 
 # Expected Test Sequence
 
 Conceptually, the test performs:
 
 ```text
-1. Generate 100 random prices for Item A.
-2. Generate 100 random prices for Item B.
+1. Generate 100 prices for Item A from the placeholder seed.
+2. Generate 100 prices for Item B from the placeholder seed.
 
 3. Run all prices through the software reference model.
 4. Save the expected actions.
@@ -683,7 +742,8 @@ Conceptually, the test performs:
 
       obtain Item A and Item B prices
 
-      determine this transaction's item ordering
+      if index >= 16:
+          use the seeded RNG to choose which slot each item occupies
 
       construct exactly 8 input bytes
 
@@ -691,12 +751,12 @@ Conceptually, the test performs:
 
       transmit input packet
 
-      wait for exactly 8 output bytes
+      wait for exactly 8 output bytes (1.0 s timeout)
 
       stop latency timer
 
       if response is incomplete:
-          record timeout
+          record TIMEOUT (packet incorrect)
           stop test
 
       decode response
@@ -707,21 +767,22 @@ Conceptually, the test performs:
           compare index
           compare item IDs
           compare actions
+          check reserved == 0x0000
           score result
 
       save CSV row
 
-7. Calculate final statistics.
+7. Calculate final statistics against 84 packets / 168 actions.
 8. Write CSV.
 9. Write summary TXT.
 10. Print final results.
 ```
 
-\---
+---
 
 # What Participants May Change
 
-Normally, participants only need to change the serial port:
+Only the serial port:
 
 ```python
 PORT = "COM6"
@@ -733,17 +794,17 @@ For example:
 PORT = "COM4"
 ```
 
-depending on the port assigned by Windows.
+depending on the port assigned by Windows (see Device Manager).
 
-\---
+---
 
 # What Participants Must NOT Change
 
 Do **not** modify these competition protocol values:
 
 ```text
-ITEM\_A = 0x11
-ITEM\_B = 0x22
+ITEM_A = 0x11
+ITEM_B = 0x22
 
 NONE = 0x00
 SELL = 0x01
@@ -755,13 +816,13 @@ Do not create a separate HOLD encoding. Holding means retaining the previous act
 Do **not** modify the input packet:
 
 ```text
-\[index16]\[item1\_8]\[price1\_16]\[item2\_8]\[price2\_16]
+[index16][item1_8][price1_16][item2_8][price2_16]
 ```
 
 Do **not** modify the output packet:
 
 ```text
-\[index16]\[item1\_8]\[action1\_8]\[item2\_8]\[action2\_8]\[reserved16]
+[index16][item1_8][action1_8][item2_8][action2_8][reserved16]
 ```
 
 Do **not** reorder fields.
@@ -774,13 +835,13 @@ Do **not** return ASCII text.
 
 Do **not** change the byte order.
 
-Do **not** change the expected BUY/SELL algorithm in the test script in order to make an incompatible FPGA result appear correct.
+Do **not** change the expected BUY/SELL algorithm or the scoring logic in the test script in order to make an incompatible FPGA result appear correct.
 
-\---
+---
 
 # Common FPGA Implementation Mistakes
 
-## 1\. Reversing the action codes
+## 1. Reversing the action codes
 
 Wrong:
 
@@ -798,9 +859,9 @@ BUY  = 00000010
 
 Remember that each action field is **8 bits**, even though only small numeric values are currently used.
 
-\---
+---
 
-## 2\. Treating slot 1 as permanently Item A
+## 2. Treating slot 1 as permanently Item A
 
 Wrong:
 
@@ -816,9 +877,9 @@ item1 ID determines where price1 goes
 item2 ID determines where price2 goes
 ```
 
-\---
+---
 
-## 3\. Returning items in a fixed A/B order
+## 3. Returning items in a fixed A/B order
 
 Wrong if the request was B/A:
 
@@ -833,21 +894,21 @@ request  = B/priceB, A/priceA
 response = B/actionB, A/actionA
 ```
 
-\---
+---
 
-## 4\. Using floating-point averaging
+## 4. Using floating-point or rounded averaging
 
 The reference uses:
 
 ```text
-average = running\_sum >> 4
+average = running_sum >> 4
 ```
 
-Match this integer behavior.
+Match this integer (floor) behavior.
 
-\---
+---
 
-## 5\. Returning NONE whenever there is no crossing
+## 5. Returning NONE whenever there is no crossing
 
 The reference holds the previous action.
 
@@ -863,15 +924,32 @@ Required:
 no crossing -> previous action remains unchanged
 ```
 
-\---
+---
 
-## 6\. Responding before the entire request is decoded
+## 6. Not updating the previous price during warm-up
 
-Wait until the complete 8-byte input packet has been received and reconstructed before processing it.
+Wrong:
 
-\---
+```text
+previous_price is first set at index 16
+```
 
-## 7\. Sending an incorrect number of response bytes
+Required:
+
+```text
+previous_price is updated on every warm-up packet,
+so at index 16 it holds the price from index 15
+```
+
+---
+
+## 7. Responding before the entire request is decoded
+
+Wait until the complete 8-byte input packet has been received and reconstructed before processing it. Never send unsolicited bytes.
+
+---
+
+## 8. Sending an incorrect number of response bytes
 
 The PC expects:
 
@@ -879,21 +957,37 @@ The PC expects:
 8 bytes exactly
 ```
 
-An incomplete response can terminate the test.
+An incomplete response ends the test.
 
-\---
+---
+
+## 9. Sending response bytes back-to-back
+
+The BL616 bridge can drop or corrupt bytes when there is no idle time between response bytes. Add idle time or buffering between response bytes.
+
+---
+
+## 10. Leaving reserved nonzero
+
+```text
+reserved = 0x0000
+```
+
+Any other value makes the packet incorrect in this test.
+
+---
 
 # Final Protocol Cheat Sheet
 
 ```text
 UART
 ----
-Baud = 115200
+Baud = 115200, 8N1, LSB first
 
 ITEM IDs
 --------
-ITEM\_A = 0x11 = 00010001
-ITEM\_B = 0x22 = 00100010
+ITEM_A = 0x11 = 00010001
+ITEM_B = 0x22 = 00100010
 
 ACTION IDs
 ----------
@@ -908,69 +1002,80 @@ PC -> FPGA
 ----------
 64 bits / 8 bytes
 
-\[index16]\[item1\_8]\[price1\_16]\[item2\_8]\[price2\_16]
+[index16][item1_8][price1_16][item2_8][price2_16]
 
 Bytes:
-0 index\[15:8]
-1 index\[7:0]
+0 index[15:8]
+1 index[7:0]
 2 item1
-3 price1\[15:8]
-4 price1\[7:0]
+3 price1[15:8]
+4 price1[7:0]
 5 item2
-6 price2\[15:8]
-7 price2\[7:0]
+6 price2[15:8]
+7 price2[7:0]
 
 FPGA -> PC
 ----------
 64 bits / 8 bytes
 
-\[index16]\[item1\_8]\[action1\_8]\[item2\_8]\[action2\_8]\[reserved16]
+[index16][item1_8][action1_8][item2_8][action2_8][reserved16]
 
 Bytes:
-0 index\[15:8]
-1 index\[7:0]
+0 index[15:8]
+1 index[7:0]
 2 item1
 3 action1
 4 item2
 5 action2
-6 reserved\[15:8]
-7 reserved\[7:0]
+6 reserved[15:8] = 0x00
+7 reserved[7:0]  = 0x00
 
 MULTI-BYTE ORDER
 ----------------
 Big-endian
 
+RESET
+-----
+Index 0 = clear all state, then process index 0 prices
+
 MOVING AVERAGE
 --------------
 Window = 16 samples
 Indices 0-15 = warm-up / not scored
-average = running\_sum >> 4
+  (add to window and sum, update previous price, respond NONE)
+old_average = old_sum >> 4
+new_sum     = old_sum - oldest_price + current_price
+new_average = new_sum >> 4
 
 BUY
 ---
-previous\_price <= old\_average
+previous_price <= old_average
 AND
-current\_price > new\_average
+current_price > new_average
 
 SELL
 ----
-previous\_price >= old\_average
+previous_price >= old_average
 AND
-current\_price < new\_average
+current_price < new_average
 
 OTHERWISE
 ---------
 retain previous action
 
+THEN
+----
+previous_price = current_price
+
 TRANSPORT
 ---------
 stop-and-wait:
 send one 8-byte request
-wait for one 8-byte response
+wait for one 8-byte response (1.0 s timeout)
 then send next request
 ```
 
-\---
+---
 
 # Competition Rule Summary
 
