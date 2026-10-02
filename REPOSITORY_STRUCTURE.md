@@ -84,7 +84,7 @@ The official organizer testing scripts do not need to be copied into every team 
 
 Optional location for:
 
-- CSVs from `22_robust_uart_test.py`
+- `trade_results_100.csv` and `trade_summary_100.txt` from `22_robust_uart_test.py`
 - Latency measurements
 - Gowin resource-utilization information, including total LUT usage
 - Logs

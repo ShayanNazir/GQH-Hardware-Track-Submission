@@ -138,6 +138,7 @@ Describe how the design was tested, including results from `21_quick_uart_test.p
 - Local test used:
 - Packet correctness (out of 84):
 - Action correctness (out of 168):
+- Estimated correctness points from `trade_summary_100.txt` (out of 70):
 
 ### Latency
 

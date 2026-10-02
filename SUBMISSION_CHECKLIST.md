@@ -59,8 +59,8 @@ Use this checklist before completing the official **Devpost** submission at <htt
 
 ## Testing
 
-- [ ] `21_quick_uart_test.py` passes on the board.
-- [ ] `22_robust_uart_test.py` passes on the board, and its CSV has been reviewed.
+- [ ] `21_quick_uart_test.py` prints `PASS` on the board.
+- [ ] `22_robust_uart_test.py` runs all 100 packets with no timeouts, and `trade_results_100.csv` has been reviewed.
 - [ ] The design adds idle time or buffering between response bytes so the BL616 bridge does not drop or corrupt bytes.
 - [ ] Final design has been tested on the Tang Nano 20K.
 - [ ] Team understands the official run: **100 packets** (indices 0–99), warm-up indices 0–15, **84 scored packets / 168 scored actions**, 1-second per-packet timeout.

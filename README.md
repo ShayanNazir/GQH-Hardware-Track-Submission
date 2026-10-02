@@ -53,12 +53,13 @@ Before the deadline, each team should:
 - [Final Submission Checklist](SUBMISSION_CHECKLIST.md)
 - [Participant Testing Resources](participant-resources/README.md)
 
-## Organizer-Provided Testing References
+## Organizer-Provided Files
 
-- [Quick UART Test Reference](participant-resources/testing/21_quick_uart_test_REFERENCE.md)
-- [Robust UART / Scoring Test Reference](participant-resources/testing/22_robust_uart_test_REFERENCE.md)
+- [`19_tang_nano_20k.cst`](participant-resources/19_tang_nano_20k.cst) — Tang Nano 20K pin constraints
+- [`21_quick_uart_test.py`](participant-resources/testing/21_quick_uart_test.py) — quick UART test ([reference](participant-resources/testing/21_quick_uart_test_REFERENCE.md))
+- [`22_robust_uart_test.py`](participant-resources/testing/22_robust_uart_test.py) — robust UART / scoring test ([reference](participant-resources/testing/22_robust_uart_test_REFERENCE.md))
 
-> **[TODO]** The Python test scripts (`21_quick_uart_test.py`, `22_robust_uart_test.py`) and the organizer-supplied `19_tang_nano_20k.cst` are not yet in this repository. See [participant-resources/README.md](participant-resources/README.md).
+Both scripts need Python 3 and pyserial. Change only the `PORT` setting. See [participant-resources/README.md](participant-resources/README.md).
 
 ## Judging Criteria
 

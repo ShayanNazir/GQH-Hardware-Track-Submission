@@ -102,7 +102,7 @@ Report your total LUT count in your team README.
 
 # Fixed Top-Level Ports
 
-Top-level port names must match the organizer-supplied `19_tang_nano_20k.cst` **exactly**. The names are fixed for this competition and **may not be renamed**.
+Top-level port names must match the organizer-supplied [`19_tang_nano_20k.cst`](participant-resources/19_tang_nano_20k.cst) **exactly**. The names are fixed for this competition and **may not be renamed**.
 
 | Port | FPGA pin | Direction | Purpose |
 |---|---:|---|---|
@@ -373,19 +373,23 @@ for each (item_id, price) in the request, routed by item_id:
 
 Use the tests in this order:
 
-1. **Quick UART test** (`21_quick_uart_test.py`) — basic communication and packet-format verification.
-2. **Robust UART test** (`22_robust_uart_test.py`) — scoring-style test with a software reference model.
+1. **Quick UART test** ([`21_quick_uart_test.py`](participant-resources/testing/21_quick_uart_test.py)) — basic communication and packet-format verification. It prints `OK` or `MISMATCH` for each scored packet and ends with `PASS` or a mismatch count.
+2. **Robust UART test** ([`22_robust_uart_test.py`](participant-resources/testing/22_robust_uart_test.py)) — scoring-style test with a software reference model.
 
 Both scripts need **Python 3** and **pyserial** (`pip install pyserial`).
 
-The robust test runs **100 packets** (indices 0–99) with the same warm-up and scoring structure as the official run: 84 scored packets and 168 scored actions, a 1-second per-packet timeout, and stop-and-wait transport. It uses a fixed **practice seed**. The official judging seed is different: it is chosen by the organizers, is the same for every team, and is not published. After warm-up the script randomly places each item in either slot (seeded, so runs are reproducible). Like the official run, it counts a packet as correct only if the index, both item IDs, both actions, and `reserved = 0x0000` are all correct. It saves a CSV of every packet. Keep it: it is the best debugging tool you have.
+The robust test runs **100 packets** (indices 0–99) with the same warm-up and scoring structure as the official run: 84 scored packets and 168 scored actions with fixed denominators, a 1-second per-packet timeout that ends the run, and stop-and-wait transport.
+
+- It uses the **practice seed** `0x57214720`. The official judging seed is different: it is chosen by the organizers, is the same for every team, and is not published.
+- After warm-up it randomly places each item in either slot (seeded, so runs are reproducible).
+- Like the official run, it counts a packet as correct only if the index, both item IDs, both actions, and `reserved = 0x0000` are all correct.
+- It writes `trade_results_100.csv` (every packet) and `trade_summary_100.txt`. Keep the CSV: it is the best debugging tool you have.
+- The summary includes **estimated correctness points out of 70** (packet + action correctness only). It does not estimate latency or LUT points.
 
 Reference documentation:
 
 - [21_quick_uart_test_REFERENCE.md](participant-resources/testing/21_quick_uart_test_REFERENCE.md)
 - [22_robust_uart_test_REFERENCE.md](participant-resources/testing/22_robust_uart_test_REFERENCE.md)
-
-> **[TODO]** `21_quick_uart_test.py` and `22_robust_uart_test.py` are not yet in this repository. Add them to `participant-resources/testing/`.
 
 ## Important
 
