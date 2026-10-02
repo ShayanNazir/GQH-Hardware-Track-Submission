@@ -228,6 +228,8 @@ The reserved field **must** be:
 reserved = 0x0000
 ```
 
+`reserved` counts toward packet correctness: in the official run, a packet with any other value is incorrect.
+
 The packet should therefore be assembled as:
 
 ```text
@@ -439,7 +441,7 @@ Before running the full test, verify:
 - Item IDs alone determine routing (never slot position or packet index).
 - Returned item order matches the received item order.
 - The returned index matches the received index.
-- Reserved bits are `0x0000` (required).
+- Reserved bits are `0x0000` (required; a nonzero value makes the packet incorrect).
 - Index 0 clears all state, then its prices are processed as the first samples of a new window.
 
 ---

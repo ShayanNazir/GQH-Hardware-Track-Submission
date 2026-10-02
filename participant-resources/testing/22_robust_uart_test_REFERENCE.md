@@ -7,13 +7,13 @@
 Unlike the quick UART test, this script:
 
 * Generates **100 test packets** (indices 0–99), the same length as the official judging run.
-* Uses a **placeholder participant seed**. It is **not** the official judging seed.
+* Uses a fixed **practice seed**. The official judging seed is different.
 * Tests two independent items.
 * Calculates the expected results in software **before transmission**.
 * Exercises the 16-sample moving-average trade algorithm.
 * After warm-up, randomly places Item A and Item B in either slot on every packet to test ID-based routing.
 * Sends only one transaction at a time (stop-and-wait).
-* Checks the returned index, both item IDs, both actions, and the reserved field.
+* Checks the returned index, both item IDs, both actions, and `reserved = 0x0000`, matching the official packet-correctness definition.
 * Detects incomplete UART responses/timeouts (1.0 s per packet).
 * Measures round-trip latency.
 * Scores against the fixed official totals: **84 scored packets** and **168 scored actions**.
@@ -24,7 +24,7 @@ Participants should first establish basic communication using `21_quick_uart_tes
 
 The full rules are in the [participant guide](../GQH_Hardware_Track_Participant_Guide.pdf) and [JUDGING_AND_TESTING.md](../../JUDGING_AND_TESTING.md). If this page disagrees with the guide, the guide wins.
 
-> **[TODO]** `22_robust_uart_test.py` is not yet in this repository. This page describes the participant version as it must behave: `PACKET_COUNT = 100`, a placeholder seed that is not the official seed, seeded random slot placement after warm-up, fixed 84/168 scoring totals, `reserved != 0x0000` treated as an incorrect packet (with a `RESERVED` status in the CSV), 1.0 s timeout, stop-and-wait, and CSV/summary output for 100 packets.
+> **[TODO]** `22_robust_uart_test.py` is not yet in this repository. This page describes the participant version as it must behave: `PACKET_COUNT = 100`, a fixed practice seed (never the official judging seed), seeded random slot placement after warm-up, fixed 84/168 scoring totals, `reserved != 0x0000` treated as an incorrect packet (with a `RESERVED` status in the CSV), 1.0 s timeout, stop-and-wait, and CSV/summary output for 100 packets.
 
 ---
 
@@ -74,15 +74,15 @@ Price range:    0 through 100
 Timeout:        1.0 s per packet
 ```
 
-The script needs **Python 3** and **pyserial** (`pip install pyserial`).
+The price range above is this script's setting.
 
-The local price range is narrower than the protocol allows. Prices are unsigned 16-bit values, so your design should handle the full 16-bit range (a 20-bit window sum) rather than relying on this test's range.
+The script needs **Python 3** and **pyserial** (`pip install pyserial`).
 
 ## Seed
 
-The script uses a fixed **placeholder participant seed**, so the generated price sequence is repeatable: running the same unmodified test produces the same test vectors and the same slot placements.
+The script uses a fixed **practice seed**, so the generated price sequence is repeatable: running the same unmodified test produces the same test vectors and the same slot placements.
 
-The placeholder seed is **not** the official judging seed. The official seed is chosen by the organizers, is the same for every team, and is not published in advance. Do not hardcode price patterns.
+The official judging seed is **different**. It is chosen by the organizers, is the same for every team, and is not published. Do not hardcode price patterns.
 
 ## What You May Change
 
@@ -248,7 +248,7 @@ The reserved field **must** be:
 reserved = 0x0000
 ```
 
-This test treats any other reserved value as an incorrect packet.
+`reserved` counts toward packet correctness. In this test and in the official run, a packet with any other value is incorrect.
 
 ---
 
@@ -556,7 +556,7 @@ After warm-up, the script checks six things:
 6. returned reserved == 0x0000
 ```
 
-A packet is counted as correct only if **all six checks pass**.
+A packet is counted as correct only if **all six checks pass**. This is the same packet-correctness definition the official run uses.
 
 Therefore, returning the correct BUY/SELL decisions with the wrong item IDs, the wrong index, or a nonzero reserved field still produces an incorrect packet.
 
@@ -695,6 +695,8 @@ RESERVED
 TIMEOUT
 ```
 
+Any of these statuses marks the packet incorrect. `RESERVED` means the response's reserved field was not `0x0000`.
+
 ---
 
 # Summary TXT Output
@@ -719,7 +721,7 @@ It reports:
 * Average successful round-trip latency.
 * UART port.
 * UART baud rate.
-* Seed used (the placeholder participant seed).
+* Seed used (the practice seed, not the official judging seed).
 
 This provides a compact final test result.
 
@@ -730,8 +732,8 @@ This provides a compact final test result.
 Conceptually, the test performs:
 
 ```text
-1. Generate 100 prices for Item A from the placeholder seed.
-2. Generate 100 prices for Item B from the placeholder seed.
+1. Generate 100 prices for Item A from the practice seed.
+2. Generate 100 prices for Item B from the practice seed.
 
 3. Run all prices through the software reference model.
 4. Save the expected actions.
@@ -973,7 +975,7 @@ The BL616 bridge can drop or corrupt bytes when there is no idle time between re
 reserved = 0x0000
 ```
 
-Any other value makes the packet incorrect in this test.
+Any other value makes the packet incorrect, in this test and in the official run.
 
 ---
 
