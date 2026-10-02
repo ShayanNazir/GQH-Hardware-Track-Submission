@@ -18,7 +18,7 @@ This test is intentionally small and easy to inspect. Passing it is a strong ind
 
 The full rules are in the [participant guide](../GQH_Hardware_Track_Participant_Guide.pdf) and [JUDGING_AND_TESTING.md](../../JUDGING_AND_TESTING.md). If this page disagrees with the guide, the guide wins.
 
-> **[TODO]** `21_quick_uart_test.py` is not yet in this repository. When it is added, its comments must not say that items are swapped on "every other transaction"; they must match the item-order rule below.
+The script needs Python 3 and pyserial. Change only its `PORT` setting.
 
 ---
 
@@ -281,13 +281,32 @@ Do **not** force Item A into output position 1 and Item B into output position 2
 
 # What the Quick Test Sends
 
-The script contains short deterministic price sequences for both items.
+The script sends **21 packets** (indices 0–20) built from fixed price sequences:
 
-The first 16 samples fill the moving-average history. After that, the prices intentionally move enough to exercise the trade-signal logic.
+| Indices | Item A (`0x11`) price | Item B (`0x22`) price |
+|---|---|---|
+| 0–15 (warm-up) | 50 | 100 |
+| 16, 17, 18, 19, 20 | 80, 85, 85, 20, 15 | 60, 55, 55, 130, 140 |
 
-After warm-up, the test also changes which slot each item occupies. This tests whether your FPGA routes information by the **item ID** instead of assuming that packet position 1 always means Item A.
+The first 16 packets fill the moving-average history. The 5 packets after that move the prices enough to exercise BUY, SELL, and repeated actions.
+
+The quick test uses a **fixed, non-alternating slot pattern**: Item A is in slot 1 for indices 0–15, 17, and 18, and Item B is in slot 1 for indices 16, 19, and 20. This tests whether your FPGA routes information by the **item ID** instead of assuming that packet position 1 always means Item A.
 
 Do not design around the slot pattern used by any particular test. The official tester may place either item in either slot on any packet.
+
+## Expected Responses
+
+A correct design returns these actions for the scored packets (index and item IDs echoed, `reserved = 0x0000`):
+
+| Index | Slot 1 | Slot 2 |
+|---:|---|---|
+| 16 | `0x22` SELL | `0x11` BUY |
+| 17 | `0x11` BUY | `0x22` SELL |
+| 18 | `0x11` BUY | `0x22` SELL |
+| 19 | `0x22` BUY | `0x11` SELL |
+| 20 | `0x22` BUY | `0x11` SELL |
+
+For warm-up packets (indices 0–15), a correct design returns `NONE` for both actions. The quick test prints warm-up responses but does not check them.
 
 ---
 
@@ -375,24 +394,32 @@ It is not purely the FPGA algorithm's internal clock-cycle latency. At 115200 ba
 
 # What You Should See
 
-For each transaction, the terminal prints information similar to:
+For each transaction, the terminal prints one line in this format (the values are what the FPGA returned):
 
 ```text
-idx= 16 | item 0x11: BUY  | item 0x22: SELL | reserved=0x0000 | VALID | <latency> us
+idx= 16 | item 0x22: SELL | item 0x11: BUY  | reserved=0x0000 | OK       | <latency> us
 ```
 
 The latency figure depends on your PC and design; the organizer reference design averaged about 16.6 ms on the judge PC.
 
-During the first 16 transactions it reports:
+The verdict column is:
+
+| Verdict | Meaning |
+|---|---|
+| `WARMUP` | Indices 0–15. The response is printed but not checked. |
+| `OK` | Scored packet: index, both item IDs, both actions, and `reserved = 0x0000` all match. |
+| `MISMATCH` | Scored packet: at least one of those fields is wrong. |
+
+After the last packet, the script prints one final line:
 
 ```text
-WARMUP
+PASS
 ```
 
-Afterward it reports:
+if every scored packet was `OK`, or otherwise:
 
 ```text
-VALID
+<N> MISMATCH(ES): see the lines above
 ```
 
 This quick test is primarily intended to verify that communication and packet routing work before using the full scoring test.
@@ -403,7 +430,13 @@ This quick test is primarily intended to verify that communication and packet ro
 
 The PC expects exactly 8 response bytes.
 
-If it does not receive all 8 bytes within the 1.0 s serial timeout, the script raises a timeout error. In the official run, a timeout counts as incorrect and ends the run.
+If it does not receive all 8 bytes within the 1.0 s serial timeout, the script stops with a `TimeoutError`:
+
+```text
+Timeout at index <N>: received <K> of 8 bytes
+```
+
+In the official run, a timeout counts as incorrect and ends the run.
 
 Common causes include:
 

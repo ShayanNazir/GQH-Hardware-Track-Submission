@@ -7,24 +7,22 @@
 Unlike the quick UART test, this script:
 
 * Generates **100 test packets** (indices 0–99), the same length as the official judging run.
-* Uses a fixed **practice seed**. The official judging seed is different.
+* Uses the fixed **practice seed** `0x57214720`. The official judging seed is different.
 * Tests two independent items.
 * Calculates the expected results in software **before transmission**.
 * Exercises the 16-sample moving-average trade algorithm.
 * After warm-up, randomly places Item A and Item B in either slot on every packet to test ID-based routing.
 * Sends only one transaction at a time (stop-and-wait).
 * Checks the returned index, both item IDs, both actions, and `reserved = 0x0000`, matching the official packet-correctness definition.
-* Detects incomplete UART responses/timeouts (1.0 s per packet).
+* Detects incomplete UART responses/timeouts (1.0 s per packet). A timeout ends the run.
 * Measures round-trip latency.
 * Scores against the fixed official totals: **84 scored packets** and **168 scored actions**.
-* Produces a CSV containing the detailed results.
-* Produces a TXT summary containing final correctness and latency statistics.
+* Produces a CSV (`trade_results_100.csv`) containing the detailed results.
+* Produces a TXT summary (`trade_summary_100.txt`) containing final correctness, **estimated correctness points out of 70**, and latency statistics.
 
 Participants should first establish basic communication using `21_quick_uart_test.py`, then use this script for full verification.
 
 The full rules are in the [participant guide](../GQH_Hardware_Track_Participant_Guide.pdf) and [JUDGING_AND_TESTING.md](../../JUDGING_AND_TESTING.md). If this page disagrees with the guide, the guide wins.
-
-> **[TODO]** `22_robust_uart_test.py` is not yet in this repository. This page describes the participant version as it must behave: `PACKET_COUNT = 100`, a fixed practice seed (never the official judging seed), seeded random slot placement after warm-up, fixed 84/168 scoring totals, `reserved != 0x0000` treated as an incorrect packet (with a `RESERVED` status in the CSV), 1.0 s timeout, stop-and-wait, and CSV/summary output for 100 packets.
 
 ---
 
@@ -72,6 +70,9 @@ Scored:         84 packets, 168 actions
 Window size:    16
 Price range:    0 through 100
 Timeout:        1.0 s per packet
+Practice seed:  0x57214720
+CSV file:       trade_results_100.csv
+Summary file:   trade_summary_100.txt
 ```
 
 The price range above is this script's setting.
@@ -80,7 +81,7 @@ The script needs **Python 3** and **pyserial** (`pip install pyserial`).
 
 ## Seed
 
-The script uses a fixed **practice seed**, so the generated price sequence is repeatable: running the same unmodified test produces the same test vectors and the same slot placements.
+The script uses the fixed **practice seed** `0x57214720` (`RANDOM_SEED`). Prices come from a random generator seeded with it, and slot placement comes from a second generator derived from it, so running the same unmodified test produces the same test vectors and the same slot placements every time.
 
 The official judging seed is **different**. It is chosen by the organizers, is the same for every team, and is not published. Do not hardcode price patterns.
 
@@ -301,7 +302,7 @@ and the actual 8 transmitted bytes are:
 
 # Why Item IDs Matter
 
-After the 16-packet warm-up, this test uses its seeded random generator to choose, on every packet, which slot each item occupies. The official tester may place either item in either slot on **any** packet.
+During warm-up (indices 0–15) this test keeps Item A in slot 1. From index 16 onward, a random generator derived from the practice seed chooses, independently on every packet, which slot each item occupies. There is no alternating or otherwise fixed pattern. The official tester may place either item in either slot on **any** packet.
 
 For one index the PC may send:
 
@@ -392,7 +393,7 @@ These packets are treated as:
 IGNORED_WARMUP
 ```
 
-and are not included in correctness scoring. Their responses must still follow the protocol and arrive in time.
+and are not included in correctness scoring. Their responses must still follow the protocol and arrive in time: the script does not check the contents of warm-up responses, but a warm-up timeout still ends the run.
 
 ## Averages
 
@@ -614,6 +615,14 @@ rx = ser.read(8)
 
 If fewer than 8 bytes arrive within **1.0 s**, the test records a `TIMEOUT`, counts that packet as incorrect, and stops. Packets that were never sent score zero. This matches the official run.
 
+The console shows:
+
+```text
+[NN] TIMEOUT: received K/8 bytes: <bytes received, in hex, or NONE>
+```
+
+The CSV gets one last row with status `TIMEOUT`. In that row the `rx_index`, `rx_item1`, `rx_action1`, `rx_item2`, `rx_action2`, and correctness columns are empty, and `rx_reserved` holds the partial bytes received (hex) or `NONE`.
+
 The test intentionally stops after an incomplete packet because continuing could cause subsequent UART bytes to become misaligned with packet boundaries.
 
 Therefore:
@@ -639,7 +648,7 @@ Then:
 latency_us = (t1 - t0) / 1000
 ```
 
-The final summary reports the average latency for successfully received packets.
+The final summary reports the average latency over all successfully received packets, including warm-up packets, in both microseconds and milliseconds.
 
 This is a **round-trip system measurement**. It includes UART transfer in both directions, FPGA processing, any idle time your design adds between response bytes, and serial/USB/host overhead. At 115200 baud (8N1), the 16 bytes of one transaction need only about 1.39 ms of wire time; most of the roughly 16.6 ms reference latency is BL616, USB, operating-system, and serial-buffering overhead.
 
@@ -653,49 +662,51 @@ The test creates:
 trade_results_100.csv
 ```
 
-The CSV records fields including:
+It has one row per packet sent, with these columns in this order:
 
-```text
-index
-
-tx_item1
-tx_price1
-tx_item2
-tx_price2
-
-expected_action1
-expected_action2
-
-rx_index
-rx_item1
-rx_action1
-rx_item2
-rx_action2
-rx_reserved
-
-action1_correct
-action2_correct
-packet_correct
-
-status
-latency_us
-```
+| Column | Contents |
+|---|---|
+| `index` | Transaction index sent |
+| `tx_item1` | Item ID sent in slot 1 (`0x11` or `0x22`) |
+| `tx_price1` | Price sent in slot 1 |
+| `tx_item2` | Item ID sent in slot 2 |
+| `tx_price2` | Price sent in slot 2 |
+| `expected_action1` | Expected slot-1 action (`NONE`, `SELL`, `BUY`), or `IGNORED` during warm-up |
+| `expected_action2` | Expected slot-2 action, or `IGNORED` during warm-up |
+| `rx_index` | Index returned by the FPGA |
+| `rx_item1` | Item ID returned in slot 1 |
+| `rx_action1` | Action returned in slot 1 (name, or hex if not a valid code) |
+| `rx_item2` | Item ID returned in slot 2 |
+| `rx_action2` | Action returned in slot 2 |
+| `rx_reserved` | Reserved field returned (for example `0x0000`); on a timeout, the partial bytes received or `NONE` |
+| `action1_correct` | `YES` / `NO` (empty during warm-up) |
+| `action2_correct` | `YES` / `NO` (empty during warm-up) |
+| `packet_correct` | `YES` / `NO` (empty during warm-up) |
+| `status` | See below |
+| `latency_us` | Round-trip latency in microseconds |
 
 This file is useful for debugging because it shows exactly which portion of a failed transaction did not match. Keep the CSV from every run.
 
-Possible status information can identify failures such as:
+## Status Values
+
+| Status | Meaning |
+|---|---|
+| `IGNORED_WARMUP` | Indices 0–15. Not scored. |
+| `CORRECT` | Index, both item IDs, both actions, and `reserved = 0x0000` all correct. |
+| `WRONG_<fields>` | Incorrect packet. `<fields>` lists every field that failed, joined by `_`, in the order `INDEX`, `ITEM1`, `ACTION1`, `ITEM2`, `ACTION2`, `RESERVED`. |
+| `TIMEOUT` | Fewer than 8 bytes arrived within 1.0 s. The packet is incorrect and the run ends. |
+
+Examples of `WRONG_<fields>`:
 
 ```text
-INDEX
-ITEM1
-ACTION1
-ITEM2
-ACTION2
-RESERVED
-TIMEOUT
+WRONG_ACTION1
+WRONG_ACTION1_ACTION2
+WRONG_ITEM1_ACTION1_ITEM2_ACTION2
+WRONG_RESERVED
+WRONG_ACTION1_RESERVED
 ```
 
-Any of these statuses marks the packet incorrect. `RESERVED` means the response's reserved field was not `0x0000`.
+There is no standalone `RESERVED` status. A nonzero reserved field shows up as `RESERVED` inside a `WRONG_...` status.
 
 ---
 
@@ -707,23 +718,45 @@ The test also creates:
 trade_summary_100.txt
 ```
 
-It reports:
+Its contents look like this (values in `<>` depend on your run):
 
-* Requested packet count (100).
-* Successfully received packet count.
-* Number of ignored warm-up packets (16).
-* Number of scored packets (84).
-* Correct packet count.
-* Packet correctness percentage (out of 84).
-* Correct individual action count.
-* Action correctness percentage (out of 168).
-* Timeout count.
-* Average successful round-trip latency.
-* UART port.
-* UART baud rate.
-* Seed used (the practice seed, not the official judging seed).
+```text
+FPGA Dual-Item Trade Signal Test
+================================
 
-This provides a compact final test result.
+Requested packets: 100
+Packets successfully received: <n>
+Warm-up packets ignored: 16
+Scored packets (fixed): 84
+Correct packets: <n>
+Packet correctness: <x.xx>%
+Correct individual actions: <n>/168
+Action correctness: <x.xx>%
+Timeouts: <0 or 1>
+
+Estimated correctness points: <x.x> / 70
+
+Average successful round-trip latency: <x.xx> us
+Average successful round-trip latency: <x.xxx> ms
+
+UART port: <PORT>
+UART baud rate: 115200
+Practice seed: 0x57214720
+```
+
+Packet and action correctness use the fixed denominators 84 and 168, not the number of packets received.
+
+**Estimated correctness points** is `50 × correct packets ÷ 84 + 20 × correct actions ÷ 168`, out of **70**. It covers packet and action correctness only. It does **not** estimate latency points or LUT points: latency is scored against the reference design on the judge PC, and LUT usage comes from the Gowin synthesis report.
+
+## Console Output
+
+For each received packet, the console prints:
+
+```text
+[NN] TX: 0x<item1>:<price1>, 0x<item2>:<price2> | EXPECTED: <action1>, <action2> | RX: 0x<item1>:<action1>, 0x<item2>:<action2> | <status> | <latency> us
+```
+
+`EXPECTED` shows `---` during warm-up. At the end, the console prints the summary lines above (from `Requested packets` to `Practice seed`) followed by the CSV and summary file names.
 
 ---
 
@@ -732,20 +765,20 @@ This provides a compact final test result.
 Conceptually, the test performs:
 
 ```text
-1. Generate 100 prices for Item A from the practice seed.
-2. Generate 100 prices for Item B from the practice seed.
+1. Generate 100 prices for Item A, then 100 prices for Item B,
+   from a random generator seeded with the practice seed (0-100).
+2. Decide slot placement for every index from a second generator
+   derived from the practice seed (Item A in slot 1 for indices 0-15;
+   random from index 16).
 
 3. Run all prices through the software reference model.
 4. Save the expected actions.
 
-5. Open UART at 115200 baud.
+5. Open UART at 115200 baud (1.0 s timeout).
 
 6. For index = 0 through 99:
 
-      obtain Item A and Item B prices
-
-      if index >= 16:
-          use the seeded RNG to choose which slot each item occupies
+      obtain Item A and Item B prices and this index's slot placement
 
       construct exactly 8 input bytes
 
@@ -758,25 +791,26 @@ Conceptually, the test performs:
       stop latency timer
 
       if response is incomplete:
-          record TIMEOUT (packet incorrect)
+          record TIMEOUT row (packet incorrect)
           stop test
 
       decode response
 
       if index < 16:
-          mark as warm-up
+          status = IGNORED_WARMUP
       else:
           compare index
           compare item IDs
           compare actions
           check reserved == 0x0000
-          score result
+          status = CORRECT or WRONG_<fields>
 
-      save CSV row
+      save CSV row and print the console line
 
-7. Calculate final statistics against 84 packets / 168 actions.
-8. Write CSV.
-9. Write summary TXT.
+7. Write trade_results_100.csv.
+8. Calculate final statistics against 84 packets / 168 actions,
+   including estimated correctness points out of 70.
+9. Write trade_summary_100.txt.
 10. Print final results.
 ```
 
