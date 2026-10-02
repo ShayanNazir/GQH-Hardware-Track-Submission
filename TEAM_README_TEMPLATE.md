@@ -170,6 +170,6 @@ Document any limitations, incomplete features, assumptions, or known issues.
 ## Final Submission
 
 - GitHub repository URL:
-- Final commit SHA (full):
-- Demo video URL, if required:
 - Devpost project URL:
+
+Do not put the SHA in your README: a commit cannot contain its own SHA. Record the full SHA from `git rev-parse HEAD` and enter it on Devpost (in your Devpost project description if there is no dedicated field).

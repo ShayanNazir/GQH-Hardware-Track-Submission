@@ -50,7 +50,7 @@ Correctness is worth 70 points (packet 50 + action 20), latency 15, and LUT usag
 
 | Criterion | Points | Measured from | How points are awarded |
 |---|---:|---|---|
-| Packet correctness | 50 | Packets with the right index, both item IDs, and both actions, out of **84** scored packets | `50 × correct packets ÷ 84` |
+| Packet correctness | 50 | Packets with the right index, both item IDs, both actions, and `reserved = 0x0000`, out of **84** scored packets | `50 × correct packets ÷ 84` |
 | Action correctness | 20 | Individual actions, out of **168** scored actions | `20 × correct actions ÷ 168` |
 | Latency | 15 | Average round-trip latency of received packets, compared with the organizer reference design on the same judge PC | 15 if at most 1.25× the reference average; 8 if at most 2×; otherwise 0 |
 | LUT usage | 15 | Total LUT count in the Gowin synthesis report, compared with the reference design | `15 × min(1, reference LUTs ÷ your LUTs)` |
@@ -189,6 +189,8 @@ The index and item fields echo the request. `reserved` **must** be:
 ```text
 reserved = 0x0000
 ```
+
+`reserved` counts toward packet correctness: a packet with any other value is incorrect.
 
 ## Response Rules
 
@@ -376,7 +378,7 @@ Use the tests in this order:
 
 Both scripts need **Python 3** and **pyserial** (`pip install pyserial`).
 
-The robust test runs **100 packets** (indices 0–99) with the same warm-up and scoring structure as the official run: 84 scored packets and 168 scored actions, a 1-second per-packet timeout, and stop-and-wait transport. It uses a **placeholder participant seed, not the official judging seed**, and after warm-up it randomly places each item in either slot (seeded, so runs are reproducible). It saves a CSV of every packet. Keep it: it is the best debugging tool you have.
+The robust test runs **100 packets** (indices 0–99) with the same warm-up and scoring structure as the official run: 84 scored packets and 168 scored actions, a 1-second per-packet timeout, and stop-and-wait transport. It uses a fixed **practice seed**. The official judging seed is different: it is chosen by the organizers, is the same for every team, and is not published. After warm-up the script randomly places each item in either slot (seeded, so runs are reproducible). Like the official run, it counts a packet as correct only if the index, both item IDs, both actions, and `reserved = 0x0000` are all correct. It saves a CSV of every packet. Keep it: it is the best debugging tool you have.
 
 Reference documentation:
 

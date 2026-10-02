@@ -40,7 +40,7 @@ Before the deadline, each team should:
 2. Push the final source/project files, **including the generated `.fs` file**, to the team's own GitHub repository.
 3. Make sure the repository is accessible to judges.
 4. Create a final commit and record its **full Git commit SHA**.
-5. Complete the Devpost submission with the GitHub repository URL, the full final commit SHA, and the other required project information.
+5. Complete the Devpost submission with the GitHub repository URL, the full final commit SHA, and the other required project information. The SHA goes in Devpost only, not in your README.
 6. Review [SUBMISSION_CHECKLIST.md](SUBMISSION_CHECKLIST.md).
 7. Drop off the board and all accessories at Reitz Room 2345 by 11:00 am on Sunday, October 4.
 
@@ -66,7 +66,7 @@ Each team is judged on **one official run of 100 packets** (indices 0–99). Ind
 
 | Criterion | Points | How points are awarded |
 |---|---:|---|
-| Packet correctness | 50 | `50 × correct packets ÷ 84` (index, both item IDs, and both actions correct) |
+| Packet correctness | 50 | `50 × correct packets ÷ 84` (index, both item IDs, both actions, and `reserved = 0x0000` all correct) |
 | Action correctness | 20 | `20 × correct actions ÷ 168` |
 | Latency | 15 | Average round-trip latency vs. the reference design (16.626 ms) on the same judge PC: 15 if ≤ 1.25× (about 20.8 ms), 8 if ≤ 2× (about 33.3 ms), otherwise 0 |
 | LUT usage | 15 | `15 × min(1, 542 ÷ your total LUTs)` |
@@ -94,7 +94,7 @@ The external interface is fixed and must not be changed.
 [index16][item1_8][action1_8][item2_8][action2_8][reserved16]
 ```
 
-`reserved` must be `0x0000`.
+`reserved` must be `0x0000`. It counts toward correctness: a packet with any other value is incorrect.
 
 ### Fixed IDs
 
@@ -161,6 +161,16 @@ git rev-parse HEAD
 ```
 
 Save the entire SHA printed by the final command. This identifies the exact version intended for judging. Do not rely only on the repository URL, because the repository can continue changing after the deadline.
+
+Enter the SHA on Devpost. If Devpost has no dedicated field for it, paste it into your Devpost project description, for example:
+
+```text
+Final GitHub Submission
+Repository: https://github.com/team-name/project-name
+Final Commit SHA: 7fe929310cd84d0e1f1d6c1234567890abcdef12
+```
+
+Do not put the SHA in your README: a commit cannot contain its own SHA.
 
 ## Repository Access
 

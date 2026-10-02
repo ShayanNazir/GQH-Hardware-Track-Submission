@@ -45,7 +45,7 @@ Use this checklist before completing the official **Devpost** submission at <htt
 - [ ] `NONE = 0x00`.
 - [ ] `SELL = 0x01`.
 - [ ] `BUY = 0x02`.
-- [ ] `reserved = 0x0000`.
+- [ ] `reserved = 0x0000` (a nonzero value makes the packet incorrect).
 - [ ] Returned index matches received index.
 - [ ] Items are routed by item ID only (never by slot or index), and the response mirrors the request's slot order.
 - [ ] No separate HOLD packet code was introduced.
@@ -67,7 +67,7 @@ Use this checklist before completing the official **Devpost** submission at <htt
 
 ## Judging Metrics
 
-- [ ] **Correctness (70):** packet correctness 50 + action correctness 20.
+- [ ] **Correctness (70):** packet correctness 50 + action correctness 20. A packet counts as correct only if the index, both item IDs, both actions, and `reserved = 0x0000` are all correct.
 - [ ] **Latency (15):** average round-trip latency vs. the 16.626 ms reference (≤ 1.25× → 15, ≤ 2× → 8).
 - [ ] **LUT usage (15):** total LUT count from **Synthesis Report → Resource → Resource Usage Summary**, vs. the 542-LUT reference.
 - [ ] Team understands latency and LUT points are 0 if packet correctness is below 95%.
@@ -88,8 +88,8 @@ git rev-parse HEAD
 
 - [ ] Project information is complete.
 - [ ] GitHub repository URL is included.
-- [ ] Full final commit SHA is included (in a dedicated field if Devpost has one, otherwise in the project description and README).
-- [ ] Demo video is included if required.
+- [ ] Full final commit SHA is included in your Devpost submission (in the project description if there is no dedicated field).
+- [ ] The SHA is **not** in the README: a commit cannot contain its own SHA.
 - [ ] Devpost submission is complete before **11:00 am EDT on October 4**.
 
 ## Drop-off

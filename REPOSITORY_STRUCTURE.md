@@ -109,4 +109,6 @@ git push
 git rev-parse HEAD
 ```
 
-Verify that the final commit is pushed successfully, then enter the repository URL and full commit SHA on Devpost.
+Verify that the final commit is pushed successfully, then enter the repository URL and the full SHA from `git rev-parse HEAD` on Devpost (in your Devpost project description if there is no dedicated field).
+
+Do not put the SHA in your README: a commit cannot contain its own SHA.
