@@ -4,10 +4,11 @@ Use this checklist before completing the official **Devpost** submission at <htt
 
 **Deadline:** Sunday, October 4, 2026, 11:00 am EDT. Submit first, then drop off the board.
 
-## Repository Access
+## Public Repository
 
 - [ ] Correct team GitHub repository URL is ready.
-- [ ] Judges can access the repository (public: link works when logged out of GitHub).
+- [ ] Repository is public and opens while logged out of GitHub (private repositories are not accepted).
+- [ ] Team will keep the repository public through judging and will not delete or rename it.
 - [ ] No passwords, API keys, tokens, private keys, or other secrets are committed.
 
 ## Required Project Files

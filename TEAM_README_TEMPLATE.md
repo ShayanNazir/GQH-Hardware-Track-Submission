@@ -173,4 +173,6 @@ Document any limitations, incomplete features, assumptions, or known issues.
 - GitHub repository URL:
 - Devpost project URL:
 
+This repository must stay public through judging and must not be deleted or renamed. Private repositories are not accepted.
+
 Do not put the SHA in your README: a commit cannot contain its own SHA. Record the full SHA from `git rev-parse HEAD` and enter it on Devpost (in your Devpost project description if there is no dedicated field).

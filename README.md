@@ -38,7 +38,7 @@ Before the deadline, each team should:
 
 1. Build and test the final FPGA design.
 2. Push the final source/project files, **including the generated `.fs` file**, to the team's own GitHub repository.
-3. Make sure the repository is accessible to judges.
+3. Make sure the repository is **public** and opens while logged out of GitHub. Private repositories are not accepted.
 4. Create a final commit and record its **full Git commit SHA**.
 5. Complete the Devpost submission with the GitHub repository URL, the full final commit SHA, and the other required project information. The SHA goes in Devpost only, not in your README.
 6. Review [SUBMISSION_CHECKLIST.md](SUBMISSION_CHECKLIST.md).
@@ -173,12 +173,11 @@ Final Commit SHA: 7fe929310cd84d0e1f1d6c1234567890abcdef12
 
 Do not put the SHA in your README: a commit cannot contain its own SHA.
 
-## Repository Access
+## Your Repository Must Be Public
 
-Teams are responsible for ensuring judges can access the submitted repository.
-
-- **Public repository:** verify that the URL opens when you are logged out of GitHub.
-- **Private repository:** follow the organizer-provided judging-access instructions and grant access before the deadline. **[TODO: judging-access instructions for private repositories are not yet published.]**
+- Your team repository **must be public**. Private repositories are not accepted.
+- Keep the repository public through judging, and do not delete or rename it.
+- Verify that the repository link opens while you are logged out of GitHub.
 
 Never commit passwords, API keys, access tokens, private keys, or other secrets.
 

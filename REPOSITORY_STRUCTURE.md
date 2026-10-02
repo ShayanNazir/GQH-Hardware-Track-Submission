@@ -4,6 +4,8 @@ This document explains the recommended layout for GQH Hardware Track team reposi
 
 Each team submits its **GitHub repository URL and full commit SHA** through Devpost. There is no zip upload. The exact internal organization may vary, but judges should be able to quickly locate the final source code, organizer-supplied constraints, build files, the final `.fs` file, and reproduction instructions.
 
+The repository **must be public**; private repositories are not accepted. Keep it public through judging, do not delete or rename it, and verify that its link opens while you are logged out of GitHub.
+
 ## Suggested Layout
 
 ```text

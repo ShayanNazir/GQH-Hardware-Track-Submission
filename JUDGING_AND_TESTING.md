@@ -14,7 +14,7 @@ It follows the [GQH Hardware Track Participant Guide](participant-resources/GQH_
 
 # Judging Flow
 
-1. Teams submit through Devpost (repository URL + full commit SHA) by **Sunday, October 4, 2026, 11:00 am EDT**.
+1. Teams submit through Devpost (repository URL + full commit SHA) by **Sunday, October 4, 2026, 11:00 am EDT**. The repository must be **public** (private repositories are not accepted), must stay public through judging, must not be deleted or renamed, and must open while logged out of GitHub.
 2. Teams then return the board and all accessories to **Reitz Room 2345** by **11:00 am on Sunday, October 4**.
 3. Judges program each board in **SRAM mode** with the `.fs` file from the team's **submitted commit**. The `.fs` file must be in the team repository.
 4. The official test runs on a **single judging PC**, with Gowin Programmer and any serial terminals closed before the judge opens the COM port.
